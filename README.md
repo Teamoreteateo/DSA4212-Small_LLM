@@ -2,6 +2,7 @@
 
 ## Cloning the repository to your local machine:
 ```bash
+cd ~/[Desired file location]
 git clone https://github.com/<your-username>/DSA4212-Small_LLM.git
 cd DSA4212-Small_LLM
 python3 -m venv .venv
