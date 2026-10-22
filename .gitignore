@@ -218,3 +218,13 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# project-specific
+data/
+data_smoke/
+results/smoke*
+report/*.aux
+report/*.log
+report/*.bbl
+report/*.blg
+report/*.out
