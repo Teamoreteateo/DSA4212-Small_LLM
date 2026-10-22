@@ -1,1 +1,42 @@
 # DSA4212-Small_LLM
+
+## Cloning the repository to your local machine:
+```bash
+git clone https://github.com/<your-username>/DSA4212-Small_LLM.git
+cd DSA4212-Small_LLM
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+## Best Practices
+```bash
+git pull
+git checkout -b <branch>     # create and switch to a branch
+
+Work, then:
+
+git add <file>
+git commit -m "xyz"
+git push -u origin <branch>
+
+The -u origin <branch> is needed the first time you push a new branch; afterwards plain git push works.
+
+[Approve new commits on Github]
+
+Then get back to main:
+
+git checkout main
+git pull
+git branch -d <branch>    # deletes branch
+```
+
+## Daily Workflow
+```bash
+git pull                     # ALWAYS before starting
+source .venv/bin/activate
+# ... work ...
+git add <file>
+git commit -m "Short description"
+git push
+```
