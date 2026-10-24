@@ -228,3 +228,36 @@ report/*.log
 report/*.bbl
 report/*.blg
 report/*.out
+# datasets, tokenizer outputs and token arrays
+datasets/
+*.bin
+*.npy
+*.npz
+*.arrow
+*.parquet
+hf_cache/
+
+# model checkpoints and weights
+checkpoints/
+ckpt/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+
+# credentials (Modal tokens normally live in ~/.modal.toml, never in the repo)
+.modal.toml
+.env.*
+*.pem
+*.key
+secrets/
+
+# temporary outputs; numerical results (results/**/*.json, *.csv) stay tracked
+tmp/
+scratch/
+wandb/
+runs/
+outputs/
+*.tmp
+.DS_Store
+Thumbs.db

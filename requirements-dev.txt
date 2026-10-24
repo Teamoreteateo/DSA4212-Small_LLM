@@ -1,0 +1,4 @@
+# Local workstation install: experiment deps + the Modal client.
+# The Modal image installs only requirements.txt.
+-r requirements.txt
+modal==1.6.2
