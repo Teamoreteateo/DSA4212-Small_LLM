@@ -1,4 +1,5 @@
 """Run the project on Modal GPUs. Data and results live on a persistent Modal Volume.
+  modal run modal_app.py::check_image                      # cheap CPU check of the image
   modal run modal_app.py::prepare --smoke                  # tiny synthetic data -> /vol/data_smoke
   modal run modal_app.py --config configs/smoke.json       # GPU smoke test
   modal run modal_app.py::prepare                          # TinyStories -> /vol/data
@@ -12,11 +13,24 @@ app = modal.App("dsa4212-small-llm")
 vol = modal.Volume.from_name("small-llm-vol", create_if_missing=True)
 VOL = "/vol"
 
+# Same pins as local installs: requirements.txt is the single source of truth.
+# No workspace or credentials here; Modal uses whichever profile/token is active
+# (`modal profile current`), so each teammate runs this unchanged in their own workspace.
+PYTHON_VERSION = "3.11"
+
 image = (
-    modal.Image.debian_slim(python_version="3.11")
-    .pip_install("torch==2.5.1", "numpy", "tokenizers", "datasets", "pandas", "matplotlib")
+    modal.Image.debian_slim(python_version=PYTHON_VERSION)
+    .pip_install_from_requirements("requirements.txt")
     .add_local_dir("code", remote_path="/root/code")  # keep add_local_dir last
 )
+
+@app.function(image=image, cpu=1, memory=1024, timeout=300)
+def check_image():
+    """CPU-only sanity check of the built image (no GPU, no volume):
+    modal run modal_app.py::check_image"""
+    import platform, torch, numpy, tokenizers, datasets
+    print(f"python {platform.python_version()}  torch {torch.__version__} (CUDA build {torch.version.cuda})")
+    print(f"numpy {numpy.__version__}  tokenizers {tokenizers.__version__}  datasets {datasets.__version__}")
 
 @app.function(image=image, volumes={VOL: vol}, cpu=8, memory=16384, timeout=3 * 3600)
 def prepare(smoke: bool = False, vocab_size: int = 4096, max_train_tokens: int = 100_000_000):
