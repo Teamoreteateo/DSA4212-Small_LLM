@@ -1,0 +1,13 @@
+{
+  "name": "smoke",
+  "out_dir": "results/smoke",
+  "models": [
+    {"name": "t1", "n_layer": 1, "n_head": 2, "n_embd": 32},
+    {"name": "t2", "n_layer": 2, "n_head": 2, "n_embd": 64}
+  ],
+  "unique_tokens": [60000, 15000],
+  "seeds": [0, 1],
+  "common": {"budget_sec": 8, "eval_every_sec": 2, "data_dir": "data_smoke",
+             "batch_size": 8, "block_size": 64, "lr": 0.003, "eval_batches": 5,
+             "test_tokens": 20000, "device": "cpu"}
+}

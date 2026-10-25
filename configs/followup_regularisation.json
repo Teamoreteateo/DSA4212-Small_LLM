@@ -1,0 +1,12 @@
+{
+  "name": "followup_dropout",
+  "out_dir": "results/followup_dropout",
+  "models": [
+    {"name": "m3", "n_layer": 6, "n_head": 8, "n_embd": 256},
+    {"name": "m5", "n_layer": 8, "n_head": 8, "n_embd": 512}
+  ],
+  "unique_tokens": [6000000, 1500000],
+  "seeds": [0, 1, 2],
+  "common": {"budget_sec": 600, "eval_every_sec": 30, "data_dir": "data",
+             "batch_size": 64, "block_size": 256, "lr": 0.001, "dropout": 0.1, "weight_decay": 0.1}
+}
