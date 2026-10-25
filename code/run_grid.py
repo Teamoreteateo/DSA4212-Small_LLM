@@ -1,21 +1,17 @@
-"""Expand a grid config into a list of runs. Shared by run_grid.py (local) and modal_app.py."""
-import itertools
+"""Run a grid locally (or on Colab). Finished runs are skipped, so it is safe to relaunch."""
+import argparse, json, os, subprocess, sys
+here = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, here)
+from grid import build_cells
 
-def build_cells(cfg, data_root=None, drop_device=False):
-    cells = []
-    for m, u, s, lr in itertools.product(cfg["models"], cfg["unique_tokens"], cfg["seeds"],
-                                         cfg.get("lrs", [None])):
-        common = dict(cfg.get("common", {}))
-        if lr is not None:
-            common["lr"] = lr
-        if drop_device:
-            common.pop("device", None)
-        if data_root is not None and "data_dir" in common:
-            common["data_dir"] = f"{data_root}/{common['data_dir']}"
-        args = ["--n_layer", str(m["n_layer"]), "--n_head", str(m["n_head"]), "--n_embd", str(m["n_embd"]),
-                "--unique_tokens", str(u), "--seed", str(s)]
-        for k, v in common.items():
-            args += [f"--{k}", str(v)]
-        tag = f"_lr{lr:g}" if lr is not None else ""
-        cells.append({"args": args, "out": f"{cfg['out_dir']}/{m['name']}_U{u}_s{s}{tag}.json"})
-    return cells
+p = argparse.ArgumentParser(); p.add_argument("config"); p.add_argument("--dry_run", action="store_true")
+args = p.parse_args()
+cells = build_cells(json.load(open(args.config)))
+print(f"{len(cells)} runs")
+for c in cells:
+    if os.path.exists(c["out"]):
+        continue
+    cmd = [sys.executable, os.path.join(here, "train.py"), *c["args"], "--out", c["out"]]
+    print(" ".join(cmd), flush=True)
+    if not args.dry_run:
+        subprocess.run(cmd, check=True)
