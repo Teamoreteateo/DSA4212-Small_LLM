@@ -6,6 +6,8 @@ def build_cells(cfg, data_root=None, drop_device=False):
     for m, u, s, lr in itertools.product(cfg["models"], cfg["unique_tokens"], cfg["seeds"],
                                          cfg.get("lrs", [None])):
         common = dict(cfg.get("common", {}))
+        # per-model overrides, e.g. {"name": "m3", ..., "lr": 0.003} from the LR pilot
+        common.update({k: v for k, v in m.items() if k not in ("name", "n_layer", "n_head", "n_embd")})
         if lr is not None:
             common["lr"] = lr
         if drop_device:

@@ -77,6 +77,20 @@ Every `modal run` spends credits. The cheapest check of the image is
 `modal run modal_app.py::check_image` (CPU only). Run Modal commands from the repository
 root, because the image reads `requirements.txt` and `code/` from there.
 
+## Configs
+
+Each experiment is one JSON file in `configs/`. `code/grid.py` runs every combination of
+`models` × `unique_tokens` × `seeds` (× `lrs` if present) and passes each key in `common`
+to `code/train.py` as a `--flag`. A key on a model entry overrides `common` for that model,
+e.g. its own learning rate from the LR pilot:
+
+```json
+{"name": "m3", "n_layer": 6, "n_head": 8, "n_embd": 256, "lr": 0.003}
+```
+
+`lrs` (used by `lr_sweep.json`) overrides both. Preview the runs without training:
+`python code/run_grid.py configs/main_grid.json --dry_run`.
+
 ## What is tracked
 
 Tracked: code, `configs/`, notes, the report, and small numerical results (JSON/CSV under
