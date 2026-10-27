@@ -17,3 +17,104 @@ At $U=1.5$M, validation loss reaches its minimum after \todo{E1, E2, ...} epochs
 m1--m5 and then rises by up to \todo{x} nats (Fig.~\ref{fig:epochs}, right).
 % P2: verdict per pre-registered rule; link to Muennighoff's "~4 epochs" claim
 % P3: gap figure (appendix) as mechanism: train loss keeps falling, val rises -> memorisation
+
+\section{Experimental setup}\label{sec:setup}
+
+Our design follows the data-constrained protocol of \citet{muennighoff2023scaling} at a much smaller
+scale, with one deliberate difference: the per-run budget is matched in \emph{device time} rather than
+in FLOPs (Section~\ref{sec:budget}).
+
+\paragraph{Data.}
+We use TinyStories \citep{eldan2023tinystories}, whose simple vocabulary allows models with only a few
+million parameters to learn fluent text, making it suitable for ten-minute runs. Training stories are
+shuffled once with a fixed seed and tokenised; the first 100M tokens form the training pool.
+Each unique-data level $U\in\{100,25,6,1.5\}$M uses the first $U$ tokens of this pool, so smaller
+subsets are nested inside larger ones, as in \citet[Fig.~2]{muennighoff2023scaling}: differences
+between levels reflect the \emph{amount} of unique data, not its content. The official TinyStories
+validation split (21{,}990 stories) is halved: the first half (2.33M tokens) is our validation set, used
+only for learning-rate selection and training curves; the second half (2.56M tokens) is the test set,
+used only for reported numbers.
+
+\paragraph{Repetition.}
+A run cuts its $U$ tokens into non-overlapping 256-token windows and reshuffles them every epoch, so
+the entire subset is repeated uniformly and epoch counts are exact. This matches
+\citet{muennighoff2023scaling} and avoids the partial up-sampling studied by
+\citet{hernandez2022repeated}, where repeating a small fraction of data many times is especially harmful.
+
+\paragraph{Tokenizer.}
+A byte-level BPE tokenizer \citep{radford2019gpt2} with a 4096-token vocabulary is trained on 200k
+training stories (tokenizer training is excluded from the budget, as permitted). A small vocabulary
+keeps the embedding table from dominating tiny models: with GPT-2's 50k vocabulary, m1's embedding
+would hold $\approx$6.4M parameters, 16$\times$ its 0.40M non-embedding parameters; with 4096 tokens it
+holds 0.52M. The tokenizer averages 3.92 bytes per token on the training data.
+
+\paragraph{Models.}
+Five pre-LayerNorm GPT models \citep{vaswani2017attention,radford2019gpt2} with tied input/output
+embeddings, GELU MLPs of width $4d$, learned positional embeddings, context length 256, no dropout,
+and GPT-2 initialisation, following nanoGPT \citep{karpathy2022nanogpt} (Table~\ref{tab:models}).
+We report non-embedding parameter counts, following \citet{kaplan2020scaling}.
+
+\paragraph{Optimisation.}
+AdamW \citep{loshchilov2019adamw} with $\beta=(0.9,0.95)$, weight decay 0.1 on weight matrices only,
+gradient clipping at 1.0, batch $64\times256=16{,}384$ tokens, and fp16 mixed precision (the T4 has no
+bf16). The learning rate warms up linearly over the first 2\% of the budget and then follows a cosine
+decay to 10\% of its peak, the schedule used by \citet{muennighoff2023scaling}. Because the schedule is
+defined on the fraction of budget used, every run completes it. Peak learning rates were selected per
+model in 17 pilot runs at $U=100$M on the \emph{validation} set (Appendix~\ref{app:lr}): $3\times10^{-3}$
+for m1--m4 and $2\times10^{-3}$ for m5, which diverged at $3\times10^{-3}$. A single shared learning rate
+was rejected because it would favour some model sizes over others and bias the comparison of optimal size.
+
+\paragraph{Compute budget.}\label{sec:budget}
+Each run receives a fixed number of training tokens, equal to 600\,s of that model's median measured
+training throughput on an NVIDIA Tesla T4 (Table~\ref{tab:models}). We first timed runs directly, but
+throughput for the \emph{same} model varied by up to 24--39\% across cloud hosts, which would have made
+results depend on host assignment (Section~\ref{sec:notwork}). Fixing tokens removes this noise while
+keeping the budget equal to ten minutes of typical T4 time. The budget was declared before the main
+experiments (repository commit of 27 Oct 2026).
+
+Matching device time rather than FLOPs is a deliberate choice: it reflects the cost a practitioner pays
+for GPU time. Small models use the GPU less efficiently, so non-embedding training FLOPs ($6ND$) range from
+$1.0\times10^{15}$ for m1 to $7.0\times10^{15}$ for m5. Under a FLOP-matched budget, as in
+\citet{hoffmann2022chinchilla} and \citet{muennighoff2023scaling}, small models would receive even more tokens.
+
+\begin{table}[h]\centering\small
+\caption{Models and per-run budgets. Throughput: median over pilot runs on a T4.
+Tokens/param uses non-embedding parameters.}
+\label{tab:models}
+\begin{tabular}{lrrrrrrrr}\toprule
+Model & layers & $d$ & heads & non-emb.\ params & tokens/s & token budget & steps & tokens/param\\\midrule
+m1 & 2 & 128 & 4 & 0.40M & 716k & 430M & 26.2k & 1083\\
+m2 & 4 & 192 & 4 & 1.78M & 379k & 228M & 13.9k & 128\\
+m3 & 6 & 256 & 8 & 4.74M & 234k & 141M & 8.6k & 30\\
+m4 & 6 & 384 & 6 & 10.6M & 145k & 87M & 5.3k & 8.2\\
+m5 & 8 & 512 & 8 & 25.2M & 76k & 46M & 2.8k & 1.8\\\bottomrule
+\end{tabular}\end{table}
+
+\paragraph{Experimental grid.}
+We train all 5 models at all 4 values of $U$ with 3 seeds (60 runs). Epochs are not chosen directly:
+they equal token budget$/U$ (Table~\ref{tab:epochs}). The $U$ levels were chosen so that the grid spans
+the regimes identified by \citet{muennighoff2023scaling}: under 4 epochs (repetition nearly free), around
+16 epochs (their estimated half-life of repeated data), and far beyond it, where returns vanish and
+overfitting is expected.
+
+\begin{table}[h]\centering\small
+\caption{Epochs over the unique data in each cell of the grid (token budget$/U$).}
+\label{tab:epochs}
+\begin{tabular}{lrrrrr}\toprule
+$U$ & m1 & m2 & m3 & m4 & m5\\\midrule
+100M & 4.3 & 2.3 & 1.4 & 0.9 & 0.5\\
+25M  & 17  & 9.1 & 5.6 & 3.5 & 1.8\\
+6M   & 72  & 38  & 24  & 15  & 7.7\\
+1.5M & 287 & 152 & 94  & 58  & 31\\\bottomrule
+\end{tabular}\end{table}
+
+\paragraph{Evaluation.}
+The primary metric is test bits per byte,
+$\mathrm{BPB}=\sum_t -\ln p(x_t\mid x_{<t})\,/\,(\ln 2\cdot B)$, where $B$ is the number of UTF-8 bytes of
+the predicted tokens, computed on the first 2M test tokens at the final checkpoint. BPB does not depend on
+the tokenizer, so results can be compared with other work. Following \citet{muennighoff2023scaling}, we use
+no early stopping, so that overfitting remains visible. Training and validation loss are also logged every
+30\,s of training time on fixed windows (identical across runs) for the overfitting analysis. BPB measures
+next-token prediction only, not the quality of generated stories or performance outside TinyStories. We
+report means over 3 seeds with 95\% $t$-intervals. Decision rules for both hypotheses, and a rule for
+diverged runs, were fixed before the main grid (\texttt{notes/analysis\_plan.md}).

@@ -12,3 +12,7 @@
 | 27 Oct | Tim | Throughput spread across Modal T4s | m4 39%, m5 24%, m2 10%, m1 2% | switch to fixed per-model token budget = median tps x 600 s |
 | 27 Oct | Tim | LR ranking at U=100M | m4 1.674 ≈ m3 1.685 < m5 1.763 < m2 1.783 < m1 2.056 | optimum interior (m3/m4) |
 | 27 Oct | Tim | Smoke test of token budget (budget_tokens=500k, 1 run) | tokens_seen = 500,224 (overshoot < 1 batch); stopped on tokens as intended | token-budget code verified; proceed to main grid |
+| 27 Oct | Tim | Main grid 60 runs | no divergences (seed sd <= 0.015 BPB) | proceed |
+| 27 Oct | Tim | H1 | optimum m4 (100M,25M; tie with m3) -> m5 (6M) -> m1 (1.5M); non-monotonic | report 6M reversal honestly |
+| 27 Oct | Tim | H2 | onset epochs fall with size: 6M 23.2/12.4/8.2/5.7 (m2-m5); 1.5M 28.5/15.8/9.1/8.8/7.3 | supported; 1.5M resolution coarse |
+| 27 Oct | Tim | m2 @1.5M test BPB 3.04 ~ uniform-guess level | extreme memorisation/overconfidence | discuss |
