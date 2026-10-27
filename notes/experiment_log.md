@@ -1,3 +1,5 @@
+| Date | Who | Tried | Result | Decision |
+|---|---|---|---|---|
 | 27 Oct | Tim | Smoke test, Modal T4, 8 runs | all pass; device=cuda, Tesla T4; resume-skip works | proceed |
 | 27 Oct | Tim | prepare TinyStories | 100M train tok (1M stories), val 2.33M, test 2.56M, 3.92 bytes/tok, vocab 4096 | data fixed for all runs |
 | 27 Oct | Tim | LR pilot 1: {3e-4,1e-3,3e-3} x m1,m3,m5 @U=100M | best m1 3e-3, m3 3e-3 (grid edge), m5 1e-3; m5@3e-3 diverged in 1st min (val 3.45) | single LR biases H1 -> per-size LR, pilot 2 |
@@ -9,3 +11,4 @@
 | 27 Oct | Tim | m4@2e-3 worse than both 1e-3 and 3e-3 | its container ran 109k tok/s vs 145-152k -> ~30% fewer steps | throughput confound |
 | 27 Oct | Tim | Throughput spread across Modal T4s | m4 39%, m5 24%, m2 10%, m1 2% | switch to fixed per-model token budget = median tps x 600 s |
 | 27 Oct | Tim | LR ranking at U=100M | m4 1.674 ≈ m3 1.685 < m5 1.763 < m2 1.783 < m1 2.056 | optimum interior (m3/m4) |
+| 27 Oct | Tim | Smoke test of token budget (budget_tokens=500k, 1 run) | tokens_seen = 500,224 (overshoot < 1 batch); stopped on tokens as intended | token-budget code verified; proceed to main grid |
