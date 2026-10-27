@@ -1,5 +1,5 @@
 """Train one GPT under a wall-clock budget on the first `unique_tokens` training tokens.
-Budget = training-step time only (fwd+bwd+optimiser), device-synchronised; eval excluded.
+Budget = training-step time (--budget_sec) or a fixed token count (--budget_tokens > 0); eval excluded.
 LR schedule is defined on the fraction of budget used -> every run completes warmup + cosine.
 Repetition is exact: non-overlapping windows over the subset, reshuffled every epoch."""
 import argparse, json, math, os, time
@@ -17,6 +17,7 @@ def get_args():
     p.add_argument("--min_lr_frac", type=float, default=0.1); p.add_argument("--warmup_frac", type=float, default=0.02)
     p.add_argument("--weight_decay", type=float, default=0.1); p.add_argument("--grad_clip", type=float, default=1.0)
     p.add_argument("--budget_sec", type=float, default=600); p.add_argument("--eval_every_sec", type=float, default=60)
+    p.add_argument("--budget_tokens", type=int, default=0)  # >0: stop on tokens, not time
     p.add_argument("--eval_batches", type=int, default=40); p.add_argument("--test_tokens", type=int, default=2_000_000)
     p.add_argument("--seed", type=int, default=0); p.add_argument("--device", default="auto")
     p.add_argument("--out", required=True)
@@ -94,9 +95,11 @@ def main():
 
     log, train_time, eval_time, steps, tokens = [], 0.0, 0.0, 0, 0
     next_eval = a.eval_every_sec
-    while train_time < a.budget_sec:
+    # fraction of budget used: by tokens if --budget_tokens > 0, else by training time
+    progress = lambda: tokens / a.budget_tokens if a.budget_tokens > 0 else train_time / a.budget_sec
+    while progress() < 1:
         for g in opt.param_groups:
-            g["lr"] = lr_at(train_time / a.budget_sec, a)
+            g["lr"] = lr_at(progress(), a)
         t0 = time.perf_counter()
         x, y = loader.next(); x, y = x.to(device), y.to(device)
         with ctx:
@@ -107,7 +110,7 @@ def main():
         scaler.step(opt); scaler.update(); sync()
         train_time += time.perf_counter() - t0; steps += 1; tokens += x.numel()
 
-        if train_time >= next_eval or train_time >= a.budget_sec:
+        if train_time >= next_eval or progress() >= 1:
             t1 = time.perf_counter()
             v, _ = eval_loss(model, val, a.block_size, a.batch_size, a.eval_batches, device, ctx,
                              rng=np.random.default_rng(1234))  # same windows for every run

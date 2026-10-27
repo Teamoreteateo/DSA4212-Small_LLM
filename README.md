@@ -84,6 +84,28 @@ Tracked: code, `configs/`, notes, the report, and small numerical results (JSON/
 (`*.pt`, `*.ckpt`, `*.safetensors`, `checkpoints/`), credentials, caches and temporary
 outputs. See `.gitignore`.
 
+## Declared compute budget (fixed 27 Oct 2026, before the main grid)
+
+**Per-run budget:** a fixed number of training tokens per model, equal to 600 s of median measured
+training throughput on a single NVIDIA Tesla T4 (Modal):
+
+| Model | Non-emb. params | Median throughput (tok/s) | Token budget |
+|---|---|---|---|
+| m1 | 0.40M | ~716k | 430M |
+| m2 | 1.78M | ~379k | 228M |
+| m3 | 4.74M | ~234k | 141M |
+| m4 | 10.6M | ~145k | 87M  |
+| m5 | 25.2M | ~76k  | 46M  |
+
+Throughput was measured in the LR pilot runs (`results/tables/lr_sweep.csv`), timing training steps only
+(forward + backward + optimiser, GPU-synchronised). A measured allowance was used instead of live
+wall-clock timing because throughput for the same model varied by up to 24–39% across Modal hosts.
+
+**Excluded from the budget:** evaluation passes, tokenizer training, LR pilot runs.
+**Initialisation:** all models trained from random initialisation; no pretrained weights or embeddings.
+**Learning rates:** chosen per model from pilot runs on the validation set: 3e-3 for m1–m4, 2e-3 for m5
+(m5 diverged at 3e-3).
+
 ## Git workflow
 
 Never commit to `main` directly. Every change goes through a pull request that the

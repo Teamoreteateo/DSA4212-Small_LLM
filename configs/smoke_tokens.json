@@ -1,0 +1,9 @@
+{
+  "name": "smoke_tokens",
+  "out_dir": "results/smoke_tokens",
+  "models": [{"name": "t1", "n_layer": 1, "n_head": 2, "n_embd": 32, "lr": 0.003, "budget_tokens": 500000}],
+  "unique_tokens": [60000],
+  "seeds": [0],
+  "common": {"budget_sec": 600, "eval_every_sec": 2, "data_dir": "data_smoke",
+             "batch_size": 8, "block_size": 64, "eval_batches": 5, "test_tokens": 20000}
+}

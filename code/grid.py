@@ -8,6 +8,9 @@ def build_cells(cfg, data_root=None, drop_device=False):
         lrs = m.get("lrs", cfg.get("lrs", [None]))
         for u, s, lr in itertools.product(cfg["unique_tokens"], cfg["seeds"], lrs):
             common = dict(cfg.get("common", {}))
+            for k, v in m.items():
+                if k not in ("name", "n_layer", "n_head", "n_embd", "lr", "lrs"):
+                    common[k] = v
             if lr is not None:
                 common["lr"] = lr
             elif "lr" in m:

@@ -1,0 +1,19 @@
+\subsection{Does the optimal model size shrink with less unique data? (H1)}
+% P1: the data-rich baseline
+At $U=100$M, the lowest test BPB is reached by \todo{m?} (\todo{x.xxx} $\pm$ \todo{CI}),
+which processes \todo{N} tokens per parameter (\todo{E} epochs) within the budget
+(Fig.~\ref{fig:size}). \todo{Compare with $\approx$20 tokens/param from Chinchilla: above or below?
+Why might tiny models / wall-clock budget differ?}
+% P2: what happens as U shrinks -> the H1 verdict per your pre-registered rule
+As $U$ decreases to \todo{6M, 1.5M}, the optimum \todo{moves to m? / stays at m?}.
+\todo{Separated CIs? -> "supported" / "trend only" / "not supported".}
+% P3: mechanism
+Larger models process fewer tokens (Fig.~\ref{fig:size}, right: \todo{714k vs 75k} tokens/s),
+so at small $U$ \todo{small models repeat data \todo{E} times while large models ...}.
+
+\subsection{When does repetition stop helping? (H2)}
+% P1: overfitting onset table/figure
+At $U=1.5$M, validation loss reaches its minimum after \todo{E1, E2, ...} epochs for
+m1--m5 and then rises by up to \todo{x} nats (Fig.~\ref{fig:epochs}, right).
+% P2: verdict per pre-registered rule; link to Muennighoff's "~4 epochs" claim
+% P3: gap figure (appendix) as mechanism: train loss keeps falling, val rises -> memorisation
