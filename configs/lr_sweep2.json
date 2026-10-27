@@ -1,0 +1,15 @@
+{
+  "name": "lr_sweep2",
+  "out_dir": "results/lr_sweep",
+  "models": [
+    {"name": "m1", "n_layer": 2, "n_head": 4, "n_embd": 128, "lrs": [0.006]},
+    {"name": "m2", "n_layer": 4, "n_head": 4, "n_embd": 192, "lrs": [0.003, 0.006]},
+    {"name": "m3", "n_layer": 6, "n_head": 8, "n_embd": 256, "lrs": [0.006]},
+    {"name": "m4", "n_layer": 6, "n_head": 6, "n_embd": 384, "lrs": [0.001, 0.002, 0.003]},
+    {"name": "m5", "n_layer": 8, "n_head": 8, "n_embd": 512, "lrs": [0.002]}
+  ],
+  "unique_tokens": [100000000],
+  "seeds": [0],
+  "common": {"budget_sec": 600, "eval_every_sec": 60, "data_dir": "data",
+             "batch_size": 64, "block_size": 256, "dropout": 0.0, "weight_decay": 0.1}
+}
