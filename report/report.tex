@@ -1,22 +1,98 @@
 \subsection{Does the optimal model size shrink with less unique data? (H1)}
-% P1: the data-rich baseline
-At $U=100$M, the lowest test BPB is reached by \todo{m?} (\todo{x.xxx} $\pm$ \todo{CI}),
-which processes \todo{N} tokens per parameter (\todo{E} epochs) within the budget
-(Fig.~\ref{fig:size}). \todo{Compare with $\approx$20 tokens/param from Chinchilla: above or below?
-Why might tiny models / wall-clock budget differ?}
-% P2: what happens as U shrinks -> the H1 verdict per your pre-registered rule
-As $U$ decreases to \todo{6M, 1.5M}, the optimum \todo{moves to m? / stays at m?}.
-\todo{Separated CIs? -> "supported" / "trend only" / "not supported".}
-% P3: mechanism
-Larger models process fewer tokens (Fig.~\ref{fig:size}, right: \todo{714k vs 75k} tokens/s),
-so at small $U$ \todo{small models repeat data \todo{E} times while large models ...}.
+
+\begin{figure}[t]\centering
+\includegraphics[width=0.49\linewidth]{figures/main_bpb_vs_size.pdf}\hfill
+\includegraphics[width=0.49\linewidth]{figures/main_bpb_vs_epochs.pdf}
+\caption{Left: test BPB against model size at each $U$ (log axes; circle marks the optimum).
+Right: test BPB against epochs over the unique data, one line per model. Error bars: 95\% $t$-intervals over 3 seeds.}
+\label{fig:size}\label{fig:epochs}
+\end{figure}
+
+\paragraph{Data-rich regime.}
+At $U=100$M, m4 (0.604 $\pm$ 0.001 BPB) and m3 (0.605 $\pm$ 0.003) are tied for the lowest test BPB
+(Fig.~\ref{fig:size}, left; Table~\ref{tab:main}). They see 8 and 30 tokens per non-embedding parameter,
+bracketing the $\approx$20 tokens per parameter that \citet{hoffmann2022chinchilla} find compute-optimal.
+Both the smallest model (m1, 1083 tokens/param) and the largest (m5, 1.8 tokens/param) are clearly worse,
+so the optimum lies inside our model range. The ranking at $U=25$M is the same (m4 0.615, m3 0.618).
+
+\paragraph{Repetition up to a few epochs is nearly free.}
+Going from $U=100$M to 25M means every model repeats its data about four times more often. Test BPB rises by
+only 0.5\% for m5 (1.8 epochs), 0.7\% for m1 (17 epochs) and 1.8--2.0\% for m2--m4 (3.5--9 epochs).
+These differences exceed the confidence intervals but are small in practice, consistent with the finding of
+\citet{muennighoff2023scaling} that up to about four epochs of repeated data is worth almost as much as fresh data.
+
+\paragraph{Scarce data: a non-monotonic path.}
+At $U=6$M the optimum moves \emph{up} to the largest model, m5 (0.741 $\pm$ 0.005), ahead of m1 and m2
+($\approx$0.79), while the mid-sized m3 and m4 are worst (0.88 and 0.87). At $U=1.5$M it collapses to the
+smallest model, m1 (1.307 $\pm$ 0.015), with m2 the worst at 3.04 BPB, close to the 3.06 BPB of a uniform
+guess over the vocabulary ($\log_2 4096 / 3.92$). By our pre-registered rule H1 is supported: the
+optimum at 1.5M (m1) is smaller than the optimum at 100M (m4), and at 1.5M their intervals are far apart
+(1.307 $\pm$ 0.015 vs.\ 2.433 $\pm$ 0.019). The 6M row, however, shows that the optimum does not shrink
+smoothly, and Section~\ref{sec:mechanism} shows that the result depends on training to the end of the budget.
+
+\begin{table}[h]\centering\small
+\caption{Test BPB (mean over 3 seeds; 95\% interval half-width $\le$ 0.036 in every cell). Bold: optimum per row.}
+\label{tab:main}
+\begin{tabular}{lrrrrr}\toprule
+$U$ & m1 & m2 & m3 & m4 & m5\\\midrule
+100M & 0.745 & 0.644 & 0.605 & \textbf{0.604} & 0.632\\
+25M  & 0.751 & 0.656 & 0.618 & \textbf{0.615} & 0.635\\
+6M   & 0.789 & 0.788 & 0.880 & 0.870 & \textbf{0.741}\\
+1.5M & \textbf{1.307} & 3.036 & 2.723 & 2.433 & 2.000\\\bottomrule
+\end{tabular}\end{table}
 
 \subsection{When does repetition stop helping? (H2)}
-% P1: overfitting onset table/figure
-At $U=1.5$M, validation loss reaches its minimum after \todo{E1, E2, ...} epochs for
-m1--m5 and then rises by up to \todo{x} nats (Fig.~\ref{fig:epochs}, right).
-% P2: verdict per pre-registered rule; link to Muennighoff's "~4 epochs" claim
-% P3: gap figure (appendix) as mechanism: train loss keeps falling, val rises -> memorisation
+
+We measure overfitting onset as the number of epochs at which validation loss reaches its minimum, counted
+only when it later rises by more than 0.005 nats. At $U=6$M, onset falls steadily with model size: 23.2, 12.4,
+8.2 and 5.7 epochs for m2--m5, while m1 never overfits in 72 epochs. At $U=1.5$M it is 28.5, 15.8, 9.1, 8.8 and
+7.3 epochs for m1--m5, after which validation loss rises by 0.9 (m1) to 5.7 (m2) nats. H2 is therefore
+supported: larger models stop benefiting from repetition sooner. Because losses are logged every 30\,s of
+training, onset is resolved only to about 1/20 of a run's epochs. This is fine at 6M (0.4--1.9 epochs), but at
+1.5M m3, m4 and m5 cannot be told apart. The secondary measure, the final gap between validation and training
+loss, is not monotonic in size at 1.5M (m2 has the largest gap) because it depends on how many epochs a model
+trains \emph{past} its onset, not only on when overfitting starts.
+
+\subsection{Mechanism: size and repetition are coupled}\label{sec:mechanism}
+
+Under a fixed device-time budget a larger model is slower, so it sees fewer epochs of the same data. Combining
+this with H2 explains the H1 pattern. At 6M, m3 and m4 run 24 and 15 epochs, well past their onsets (12 and 8),
+and their validation loss rises by 0.40 nats; m5 runs only 7.7 epochs, just past its onset (5.7), and loses 0.08.
+The largest model wins because its slowness protects it from over-repetition, while m1 and m2 have too little
+capacity to memorise much. At 1.5M every model passes its onset by a wide margin, and only m1's tiny capacity
+limits the damage.
+
+\paragraph{Sensitivity check: early stopping.}
+As pre-registered, we re-rank models by their best validation loss (an early-stopped checkpoint) instead of the
+final one (\texttt{results/tables/early\_stop\_check.csv}). The ranking is unchanged at 100M and 25M, but at the
+small $U$ levels it reverses: at 6M the order becomes m5, m4, m3, m2, m1, and at 1.5M m4 and m5 are best and m1
+is \emph{last}. With early stopping, larger models win at every $U$. The shrinking optimum in H1 is therefore a
+consequence of training every model to the end of its budget, not evidence that scarce data calls for smaller models.
+This check uses validation loss, so it compares rankings only.
+
+\subsection{Follow-up: does regularisation remove the reversal?}
+
+If over-repetition causes the reversal, regularisation should remove it. We reran m3, m4 and m5 at $U\in\{6,1.5\}$M
+with dropout 0.1 (18 runs, same budgets and learning rates; Table~\ref{tab:dropout}). At 6M, dropout improves
+every model by 0.06--0.20 BPB, and m3--m5 become tied (0.681--0.686) and clearly better than m1 and m2 without
+dropout ($\approx$0.79): the reversal disappears. Overfitting also largely disappears: m3 and m5 no longer overfit,
+and m4's validation loss rises by only 0.007 nats. At 1.5M, dropout cuts test BPB by 36--58\%, and
+m3 with dropout (1.151 $\pm$ 0.005) beats the best model without dropout (m1, 1.307). Dropout delays overfitting
+(onset 18.7, 12.4 and 9.4 epochs for m3--m5, against 9.1, 8.8 and 7.3 without it) but does not prevent it:
+validation loss still rises by 0.7--1.3 nats over 30--94 epochs. Regularisation fixes moderate repetition, but
+extreme repetition remains costly.
+
+\begin{table}[h]\centering\small
+\caption{Test BPB without and with dropout 0.1 (mean over 3 seeds; 95\% half-width $\le$ 0.024).
+m1 and m2 were not rerun.}
+\label{tab:dropout}
+\begin{tabular}{lrrrr}\toprule
+ & \multicolumn{2}{c}{$U=6$M} & \multicolumn{2}{c}{$U=1.5$M}\\
+Model & none & 0.1 & none & 0.1\\\midrule
+m3 & 0.880 & 0.686 & 2.723 & \textbf{1.151}\\
+m4 & 0.870 & \textbf{0.681} & 2.433 & 1.356\\
+m5 & 0.741 & 0.685 & 2.000 & 1.288\\\bottomrule
+\end{tabular}\end{table}
 
 \section{Experimental setup}\label{sec:setup}
 
