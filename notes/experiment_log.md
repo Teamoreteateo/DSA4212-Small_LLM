@@ -15,4 +15,4 @@
 | 27 Oct | Tim | Main grid 60 runs | no divergences (seed sd <= 0.015 BPB) | proceed |
 | 27 Oct | Tim | H1 | optimum m4 (100M,25M; tie with m3) -> m5 (6M) -> m1 (1.5M); non-monotonic | report 6M reversal honestly |
 | 27 Oct | Tim | H2 | onset epochs fall with size: 6M 23.2/12.4/8.2/5.7 (m2-m5); 1.5M 28.5/15.8/9.1/8.8/7.3 | supported; 1.5M resolution coarse |
-| 27 Oct | Tim | m2 @1.5M test BPB 3.04 ~ uniform-guess level | extreme memorisation/overconfidence | discuss |
+| 27 Oct | Tim | m2 @1.5M test BPB 3.04 ~ uniform-guess level | extreme memorisation/overconfidence | discuss || 28 Oct | Delphino (Claude) | Early-stopping sensitivity check (code/early_stop_check.py, val loss) | ranking by best val: m4/m5 best at every U; m1 last at 1.5M (final-checkpoint ranking: m1 first) | H1 holds only when training to the full budget; state as a qualifier |

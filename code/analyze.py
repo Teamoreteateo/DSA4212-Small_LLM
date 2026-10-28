@@ -2,6 +2,7 @@
 Usage: python code/analyze.py results/main --tag main"""
 import argparse, glob, json, os
 import matplotlib; matplotlib.use("Agg")
+import matplotlib.ticker
 import matplotlib.pyplot as plt
 import numpy as np, pandas as pd
 
@@ -63,7 +64,10 @@ def main():
                     color=ucol(i), label=f"U = {fmt_tokens(u)}")
         k = d.test_bpb_mean.idxmin()
         ax.scatter(d.loc[k, "n_params_non_emb"], d.loc[k, "test_bpb_mean"], s=160, facecolors="none", edgecolors=ucol(i))
-    ax.set_xscale("log"); ax.set_xlabel("non-embedding parameters"); ax.set_ylabel("test bits per byte")
+    ax.set_xscale("log"); ax.set_yscale("log")  # log y: U=1.5M (up to ~3 BPB) would flatten the rest
+    ax.set_yticks([0.6, 0.8, 1, 1.5, 2, 3], ["0.6", "0.8", "1", "1.5", "2", "3"])
+    ax.yaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
+    ax.set_xlabel("non-embedding parameters"); ax.set_ylabel("test bits per byte")
     ax.legend(fontsize=8); ax.set_title("Fixed compute: loss vs model size"); save(fig, "bpb_vs_size")
 
     # Fig: test BPB vs epochs, per model (H2)
