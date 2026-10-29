@@ -2,6 +2,8 @@
   "name": "followup_dropout",
   "out_dir": "results/followup_dropout",
   "models": [
+    {"name": "m1", "n_layer": 2, "n_head": 4, "n_embd": 128, "lr": 0.003, "budget_tokens": 430000000},
+    {"name": "m2", "n_layer": 4, "n_head": 4, "n_embd": 192, "lr": 0.003, "budget_tokens": 228000000},
     {"name": "m3", "n_layer": 6, "n_head": 8, "n_embd": 256, "lr": 0.003, "budget_tokens": 141000000},
     {"name": "m4", "n_layer": 6, "n_head": 6, "n_embd": 384, "lr": 0.003, "budget_tokens": 87000000},
     {"name": "m5", "n_layer": 8, "n_head": 8, "n_embd": 512, "lr": 0.002, "budget_tokens": 46000000}
