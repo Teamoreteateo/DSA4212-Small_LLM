@@ -1,30 +1,39 @@
 # Reading notes
 
 Rule: each claim has a section/figure reference. Rewrite in your own words after reading.
-AI-drafted starting points are marked [AI draft - verify & rewrite].
+Status (30 Oct): every claim below was checked against the paper text by Claude (PDFs from arXiv,
+nanoGPT from GitHub). Short verbatim quotes are in "quotes". Items marked [CHECK] could not be confirmed
+or differ from how the report states them. "reader" = the teammate who has read the paper: still to fill.
 
-## Muennighoff et al. 2023, Scaling Data-Constrained Language Models (NeurIPS 2023) — reader: TODO
-[AI draft - verify & rewrite]
+## Muennighoff et al. 2023, Scaling Data-Constrained Language Models (NeurIPS 2023), arXiv 2305.16264 — reader: TODO
 
 ### What they did
-- 400+ GPT-2-style models, 10M to 9B params, up to 1500 epochs, on nested subsets of C4 (§1, §4, Fig. 2).
+- "more than 400 models ranging from 10 million to 9 billion parameters for up to 1500 epochs" (§1);
+  §4 gives the largest as 8.7B. Data: "subsets of C4" (§4), nested so that "runs using less data (more
+  epochs) always use a subset of the data used in" runs with more data (Fig. 2 caption).
 - Split total tokens D into unique tokens U_D and repetitions R_D = epochs - 1 (§3).
-- Fit a data-constrained scaling law: effective data D' = U_D + U_D * R*_D * (1 - exp(-R_D / R*_D)),
-  i.e. each repetition is worth less than fresh data, decaying exponentially (§3.1, Eq. 5).
-  Symmetric term for "excess parameters" N' (Eq. 6).
+- Effective data D' = U_D + U_D * R*_D * (1 - exp(-R_D / R*_D)) (§3.1, Eq. 5): each repetition is worth
+  exponentially less than fresh data. Symmetric term for "excess parameters" (Eq. 6).
+- Fitted values: "R*_N = 5.309743 and R*_D = 15.387756" (App. A).
+- "we do not use early stopping to also explore the extent of overfitting when repeating" (§4);
+  "cosine learning rate schedules that decay 10x over the course of training" (§4).
+- "we always repeat the entire available data rather than subsets of it" (§4), contrasting with Hernandez.
 
 ### Key findings we rely on
-1. Up to ~4 epochs: loss nearly the same as unique data (abstract; §6: 8.7B model, 4 epochs -> only
-   0.5% higher val loss than 1 epoch).
-2. Half-life R*_D ~ 15 -> meaningful gains up to ~16 epochs, then returns collapse (§6, Fig. 5).
-3. Excess parameters lose value faster than repeated data (R*_N < R*_D) -> with limited data, put extra
-   compute into more epochs, i.e. SMALLER models than Chinchilla predicts (§5, Fig. 1 right, Fig. 3).
-   => basis for our H1.
-4. Too many params/epochs eventually INCREASE loss; their law does not model this (§5, last para;
-   §6 notes it underestimates loss of "failing" runs, e.g. 44 epochs).
-   => basis for our H2 (overfitting onset).
-5. For 100M unique tokens, the Chinchilla one-epoch optimum is ~7M params (§5). Our pilots: optimum
-   m3/m4 (4.7M/10.6M) at U=100M -> same order of magnitude (different data/tokenizer, so only indicative).
+1. "training with up to 4 epochs of repeated data yields negligible changes to loss" (abstract). §6: the
+   8.7B model at 4 epochs had "only 0.5% higher validation loss than the single-epoch model".
+2. "R*_D ~ 15, corresponding to 15 repetitions (or 16 epochs)" (§6): the half-life of repeated data.
+   Value keeps decaying after that: "At 40 epochs, repeating is worthless" (Fig. 1 left) and "the value of
+   adding compute eventually decays to zero" (abstract). [CHECK] The report says returns "vanish" after
+   ~16 epochs; more precisely they halve-ish (1/e) by ~16 and are near zero by ~40.
+3. "Since R*_D > R*_N, excess parameters decay faster" (App. A); "Allocation is optimized by scaling epochs
+   faster than parameters" (§5). With limited data: smaller models, more epochs than Chinchilla. => H1.
+4. "Adding parameters and epochs causes the loss to decrease and eventually increase again" (§5); their law
+   "significantly underestimates the final test loss of failing models where loss increases midway through"
+   (§6; 44-epoch runs). => H2.
+5. For 100M unique tokens the one-epoch compute-optimal model "has U_N of approximately 7M parameters" (§5,
+   using the Chinchilla laws). Our optimum at U=100M is m3/m4 (4.7M/10.6M non-emb.): same order of magnitude,
+   only indicative (different data and tokenizer; Chinchilla counts embeddings, we do not).
 
 ### Design choices we copied (and why)
 | Their choice (§4) | Ours | Why it matters |
@@ -47,24 +56,66 @@ AI-drafted starting points are marked [AI draft - verify & rewrite].
   m3 5.6 ep, m4 3.5 ep, m5 1.8 ep)
 - Does the overfitting onset (epochs) shrink with model size? (H2; their law does not predict this)
 
-## Hoffmann et al. 2022 (Chinchilla) — reader: TODO
-- [verify] Compute-optimal: scale params and tokens equally (Muennighoff §2 confirms "alpha ~ beta").
-- [verify] ~20 tokens/param (70B model on 1.4T tokens). CHECK whether their param count includes embeddings.
-- Observation: at our budgets, tokens/param = m1 1083, m2 128, m3 30, m4 8.2, m5 1.8 (non-emb params).
-  ~20 lies between m3 and m4, where our pilots found the optimum at U=100M.
+## Hoffmann et al. 2022 (Chinchilla), arXiv 2203.15556 — reader: TODO
+- "for compute-optimal training, the model size and the number of training tokens should be scaled equally"
+  (abstract). Chinchilla: 70B parameters, 1.4T tokens (Table 1).
+- [CHECK] The phrase "20 tokens per parameter" does NOT appear in the paper. It is derived: Table 3 gives
+  1B params -> 20.2B tokens, and 1.4T/70B = 20. Cite Table 3 when the report says "roughly 20".
+- [CHECK] "we also count embeddings matrices in the total parameter count" (App. F). Chinchilla counts
+  embeddings; we (following Kaplan) do not. Our tokens/param comparison is therefore rough; say so.
+- "the training runs for our analysis have all been trained on less than an epoch of data" (§5), though
+  Table A1 notes MassiveWeb and Wikipedia subsets were used for more than one epoch.
+- Schedule: "when the cosine cycle overshoots the number of training steps by more than 25%, performance is
+  noticeably degraded"; LR "drops by a factor of 10x during training, using a cosine schedule" (App. D.1).
+  Our schedule is defined on the fraction of budget used, so it always ends exactly at the end of training.
+- Our numbers: tokens/param m1 1083, m2 128, m3 30, m4 8.2, m5 1.8 (non-emb.). ~20 lies between m3 and
+  m4, where the U=100M optimum is.
 
-## Kaplan et al. 2020 — reader: TODO
-- [verify] power laws in N, D, C; non-embedding parameter counts (we follow this convention).
+## Kaplan et al. 2020, Scaling Laws for Neural Language Models, arXiv 2001.08361 — reader: TODO
+- "Performance has a power-law relationship with each of the three scale factors N, D, C when not
+  bottlenecked by the other two" (§1.1). Exponents (§1.2): alpha_N ~ 0.076, alpha_D ~ 0.095.
+- Non-embedding parameters: "this produces significantly cleaner scaling laws" (§2.1); with embeddings
+  included "the trend is somewhat obscured" (§3.2). We follow this convention.
+- Overfitting: "The performance penalty depends predictably on the ratio N^0.74/D" (§1.1). Relevant to H2:
+  bigger models overfit a fixed dataset sooner.
+- "Large models are more sample-efficient than small models" (§1.1), and the compute-optimal recipe is
+  "training very large models and stopping significantly short of convergence" (§1.1). Chinchilla later
+  shifted this towards more tokens per parameter.
+- [CHECK] The report's Background says Kaplan and Chinchilla "both assume each token is seen once". Kaplan
+  does study data-limited training (the N^0.74/D result), so tone this down to Chinchilla's analysis runs.
 
-## Hernandez et al. 2022 (Repeated data) — reader: TODO
-- Repeating a small fraction (0.1%) of data 100x significantly degrades performance (as cited in Muennighoff §8).
-- Contrast: we (like Muennighoff) repeat the whole subset uniformly.
+## Hernandez et al. 2022, Scaling Laws and Interpretability of Learning from Repeated Data, arXiv 2205.10487 — reader: TODO
+- "by repeating 0.1% of the data 100 times" (abstract), with repeats making up 10% of training tokens,
+  "an 800M parameter model can be degraded" to the performance of "a 2x smaller model (400M params)"
+  (abstract).
+- Mechanism: "there is a range in the middle where the data can be memorized" (intro); repeated data "can
+  lead test loss to increase midway through training" (abstract), a double-descent effect; "repeated data
+  disproportionately damages induction heads" (intro).
+- Contrast with us: they up-sample a small subset; we (like Muennighoff) repeat the whole subset uniformly,
+  reshuffled each epoch. Their "memorisation" lens fits m2 at 1.5M ending near uniform-guess BPB.
 
-## Eldan & Li 2023 (TinyStories) — reader: TODO
-- [verify] dataset designed so very small models produce fluent text -> justifies our dataset at this scale.
+## Eldan & Li 2023, TinyStories, arXiv 2305.07759 — reader: TODO
+- Generated by "GPT-3.5 and GPT-4" (§2) from "a vocabulary consisting of about 1500 basic words" (§2),
+  using only words "a typical 3-year-old child would understand" (§2).
+- Models "below 10 million total parameters" produce fluent, consistent stories (abstract); §5 notes this
+  works even with "only one transformer block". Justifies the dataset for our 0.4M-25M models.
+- Their main evaluation is GPT-4 grading (grammar, creativity, consistency; §3); we use BPB only.
+- Limitation for us: simple, synthetic, low-entropy text; overfitting onset may differ on web text.
 
-## nanoGPT / Smol Playbook — reader: TODO
-- Pre-LN, weight tying, AdamW betas (0.9, 0.95), weight decay 0.1 on matrices only, cosine + warmup: TODO cite sources.
+## nanoGPT (Karpathy), github.com/karpathy/nanoGPT — reader: TODO
+- Checked in model.py / train.py: pre-LayerNorm blocks (x + attn(ln_1(x))), weight tying
+  (wte.weight = lm_head.weight), init normal std 0.02 with residual projections scaled by 1/sqrt(2*n_layer),
+  weight decay only on parameters with dim >= 2, beta2 = 0.95, cosine LR with linear warmup, min_lr ~ lr/10
+  ("per Chinchilla" in the code comments). Our model.py and train.py follow these.
+- The README now marks nanoGPT as "very old and deprecated" in favour of nanochat (Nov 2025 note); citing it
+  for the architecture is still fine.
+- [CHECK] The old note mentioned the "Smol Playbook"; the report does not cite it. Dropped here.
 
 ## Papers we found ourselves (required)
-- TODO
+- Nakkiran et al. 2021, Deep Double Descent, arXiv 1912.02292 (already in refs.bib) — reader: TODO
+  - "as we increase model size, performance first gets worse and then gets better" (abstract); double descent
+    also occurs "as a function of the number of training epochs" (abstract); defines "effective model
+    complexity" (abstract, §1); finds regimes where "increasing (even quadrupling) the number of train
+    samples actually hurts test performance" (abstract).
+  - Relation to us: our 6M row (m3/m4 worst, m1/m2 and m5 better) is non-monotonic in size, but in our
+    setup size and epochs change together, so the mechanism is not the same. Report frames it that way.
