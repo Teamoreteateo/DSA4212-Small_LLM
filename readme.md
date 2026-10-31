@@ -99,5 +99,5 @@ scripts/     check_env.py
 ```
 
 ## AI assistance
-Claude (Anthropic) was used to draft the code, the reading notes and most of the report text, which we
+Claude (Anthropic) was used to draft the code, the reading notes and some of the report text, which we
 reviewed, edited and checked against the result files. See Section "Use of AI tools" in the report.
