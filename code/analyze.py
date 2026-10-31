@@ -68,7 +68,7 @@ def main():
     ax.set_yticks([0.6, 0.8, 1, 1.5, 2, 3], ["0.6", "0.8", "1", "1.5", "2", "3"])
     ax.yaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
     ax.set_xlabel("non-embedding parameters"); ax.set_ylabel("test bits per byte")
-    ax.legend(fontsize=8); ax.set_title("Fixed compute: loss vs model size"); save(fig, "bpb_vs_size")
+    ax.legend(fontsize=8); ax.set_title("Fixed per-model budget: loss vs model size"); save(fig, "bpb_vs_size")
 
     # Fig: test BPB vs epochs, per model (H2)
     fig, ax = plt.subplots(figsize=(5, 3.6))

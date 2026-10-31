@@ -76,14 +76,16 @@ Runs are not bit-exact across re-executions (GPU non-determinism); differences a
 ## Where each report item comes from
 | Report item | File |
 |---|---|
-| Table 1 (models, budgets) | `configs/main_grid.json`, `results/tables/lr_sweep.csv` |
-| Table 3 (main test BPB) | `results/tables/main_summary.csv` |
+| Table 1 (models, budgets, epochs) | `configs/main_grid.json`, `results/tables/lr_sweep.csv`, `results/tables/main_summary.csv` |
+| Learning-rate pilots (Section 3) | `results/tables/lr_sweep.csv` |
 | Fig. 1 left / right | `report/figures/main_bpb_vs_size.pdf`, `report/figures/main_bpb_vs_epochs.pdf` |
-| H1/H2 numbers (optimum, onset) | `results/tables/main_key_numbers.csv` |
-| Early-stopping check | `results/tables/early_stop_check.csv`, `results/tables/followup_dropout_early_stop_check.csv` |
-| Table 4 (dropout) | `results/tables/followup_dropout_summary.csv`, `results/tables/followup_dropout_key_numbers.csv` |
-| Appendix A (LR pilots) | `results/tables/lr_sweep.csv` |
-| Appendix B figures | `report/figures/main_gap_vs_epochs.pdf`, `report/figures/main_val_curves_smallU.pdf` |
+| Table 2 (main test BPB) | `results/tables/main_summary.csv` |
+| H1/H2 numbers (optimum, onset, validation rise) | `results/tables/main_key_numbers.csv` |
+| Early-stopping check (Section 4.3) | `results/tables/early_stop_check.csv`, `results/tables/followup_dropout_early_stop_check.csv` |
+| Table 3 and Section 4.4 (dropout) | `results/tables/followup_dropout_summary.csv`, `results/tables/followup_dropout_key_numbers.csv` |
+
+The other figures in `report/figures/` (throughput, train/val gap, validation curves) are produced by
+`code/analyze.py` as supporting diagnostics and are not used in the report.
 
 ## Repository layout
 ```
@@ -92,9 +94,10 @@ configs/     JSON grids (smoke, smoke_tokens, lr_sweep, lr_sweep2, main_grid, fo
 modal_app.py Modal runner (T4 GPUs, persistent volume)
 results/     raw run JSONs (lr_sweep, main, followup_dropout) and summary CSVs (tables/)
 report/      report.tex, refs.bib, figures/, report.pdf
-notes/       analysis_plan.md (pre-registered), experiment_log.md, reading_notes.md
+notes/       analysis_plan.md (pre-registered), experiment_log.md, reading_notes.md, report_outline.md
 scripts/     check_env.py
 ```
 
 ## AI assistance
-Claude (Anthropic) was used to draft code and parts of the report; see Section "Use of AI tools" in the report.
+Claude (Anthropic) was used to draft the code, the reading notes and the text of the report sections, which we
+reviewed, edited and checked against the result files. See Section "Use of AI tools" in the report.

@@ -155,7 +155,7 @@ no early stopping, so that overfitting remains visible. Training and validation 
 next-token prediction only, not the quality of generated stories or performance outside TinyStories. We
 report means over 3 seeds with 95\% $t$-intervals. Decision rules for both hypotheses, and a rule for
 diverged runs, were fixed before the main grid (\texttt{notes/analysis\_plan.md}). No run met the
-divergence rule (seed standard deviation $\le$ 0.015 BPB in every cell).
+divergence rule (final validation loss more than 0.5 nats above its cell's median).
 
 % ===========================================================================
 \section{Results}\label{sec:results}
