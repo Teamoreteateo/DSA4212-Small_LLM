@@ -24,66 +24,43 @@
 
 % ===========================================================================
 \section{Introduction}
-\todo{DRAFT -- rewrite in your own words}
-Compute-optimal scaling laws \citep{kaplan2020scaling,hoffmann2022chinchilla} describe how to split a
-training budget between model size and training tokens, but they assume that fresh data never runs out.
-When unique data is limited, extra compute must be spent either on repeating the same data for more epochs
-or on a larger model that passes over it fewer times. \citet{muennighoff2023scaling} studied this trade-off
-for models of 10M--9B parameters under FLOP-matched budgets: a few epochs of repetition were almost as good
-as new data, the value of repeated tokens decayed after roughly 16 epochs, and under data constraints extra
-compute was better spent on epochs than on parameters.
-
-We ask whether the same picture holds for tiny GPTs trained for ten minutes on a single GPU, where the
-budget that matters in practice is device time rather than FLOPs:
+Compute-optimal scaling laws \citep{kaplan2020scaling,hoffmann2022chinchilla} tell us how to split a
+training budget between model size and training tokens, assuming fresh data is always available. When unique
+data runs short, extra compute must go either into more epochs over the same data or into a larger model that
+sees it fewer times. \citet{muennighoff2023scaling} studied this trade-off for models of 10M--9B parameters:
+up to about four epochs of repetition was almost as good as new data, and extra compute was better spent on
+epochs than on parameters. We ask whether this holds for tiny GPTs trained for ten minutes on one GPU:
 \begin{quote}\emph{Under a fixed per-run compute budget, how do (i) the optimal model size and (ii) the
 usefulness of repeating data change as the number of unique training tokens $U$ shrinks?}\end{quote}
-\noindent Two hypotheses were fixed before the main experiments.
-\textbf{H1}: the optimal model size decreases as $U$ decreases.
-\textbf{H2}: larger models stop benefiting from repetition after fewer epochs.
-
-We train five model sizes (0.4M--25M non-embedding parameters) at four levels of unique data
-(1.5M--100M tokens), with three seeds each, plus a dropout follow-up. H2 is supported, with and without
-dropout. H1 holds only in part. Without regularisation, the optimum moves non-monotonically
-(m4 $\to$ m5 $\to$ m1) and the shift disappears under early stopping, because under a device-time budget
-larger models are slower and therefore repeat their data less. With dropout, moderate scarcity (6M tokens)
-leaves the optimum unchanged, while extreme scarcity (1.5M tokens) clearly favours the smallest model, which
-then achieves the best result of all strategies we tried.
+\noindent We fixed two hypotheses before the main experiments. \textbf{H1}: the optimal model size decreases
+as $U$ decreases. \textbf{H2}: larger models stop benefiting from repetition after fewer epochs.
+Across five model sizes (0.4M--25M non-embedding parameters), four data levels (1.5M--100M tokens), three
+seeds and a dropout follow-up, H2 is supported. H1 holds only in part: without regularisation the optimum
+moves non-monotonically, because larger models are slower and so repeat their data less; with dropout it is
+unchanged at 6M tokens and shifts to the smallest model only at 1.5M.
 
 % ===========================================================================
 \section{Background}
-\todo{DRAFT -- rewrite in your own words after reading the papers}
-
 \paragraph{Compute-optimal scaling.}
-\citet{kaplan2020scaling} found that language-model loss follows power laws in parameters, data and compute,
-and introduced the convention of counting non-embedding parameters, which we follow.
-\citet{hoffmann2022chinchilla} revised the allocation: parameters and training tokens should grow in equal
-proportion, which for their models amounted to roughly 20 training tokens per parameter. Both studies assume
-each token is seen once.
+\citet{kaplan2020scaling} found power laws linking loss to parameters, data and compute, and counted
+non-embedding parameters, a convention we follow. \citet{hoffmann2022chinchilla} showed that parameters and
+training tokens should grow in equal proportion, about 20 tokens per parameter in their Table~3 (their counts
+include embeddings). Their analysis runs used less than one epoch of data.
 
 \paragraph{Repeated data.}
-\citet{muennighoff2023scaling} extend the Chinchilla law to repeated data by splitting training tokens into
-unique tokens and repetitions, and treating each repetition as worth exponentially less than fresh data
-(their \S3). Repeating the whole corpus for up to about four epochs barely changed loss; the fitted
-``half-life'' of repeated data corresponds to about 16 epochs, after which returns vanish (\S6). Because
-excess parameters lose value faster than repeated data, their fit recommends smaller models trained for more
-epochs than Chinchilla would suggest (\S5): the basis of our H1. They also observe that too many epochs or
-parameters eventually \emph{increase} loss, which their law does not model: the basis of our H2.
-In contrast, \citet{hernandez2022repeated} repeat only a small subset of the data many times and find that this
-can hurt performance disproportionately; like \citet{muennighoff2023scaling}, we repeat the entire subset uniformly.
+\citet{muennighoff2023scaling} extend this to repeated data, treating each repetition as worth exponentially
+less than a fresh token. Their fitted half-life is about 16 epochs and repetition is worthless by about 40;
+because excess parameters lose value faster than repeated data, they recommend smaller models trained for more
+epochs (basis of H1). They also note that too many epochs eventually \emph{increase} loss, which their law does
+not capture (basis of H2). \citet{hernandez2022repeated} show that repeating a small subset many times is
+especially harmful; like Muennighoff et al., we repeat the whole subset uniformly. \citet{nakkiran2021deep}
+show that test error can be non-monotonic in model size and training time (double descent).
 
-\paragraph{Non-monotonic generalisation.}
-\citet{nakkiran2021deep} show that test error can be non-monotonic in model size and in training time
-(``double descent''): models just large enough to fit their training data can generalise worse than both
-smaller and larger ones. Our 6M results show a similar non-monotonic pattern, although our mechanism differs
-because, under a fixed device-time budget, model size and number of epochs change together
-(Section~\ref{sec:mechanism}).
-
-\paragraph{Small models and our setting.}
-TinyStories \citep{eldan2023tinystories} was built so that models of a few million parameters can learn fluent
-English, which makes it suitable for ten-minute runs; our implementation follows nanoGPT
-\citep{karpathy2022nanogpt}. Our setting differs from the studies above in three ways: models are about three
-orders of magnitude smaller, the data is simple synthetic text rather than web text, and the budget is matched
-in device time rather than FLOPs.
+\paragraph{Our setting.}
+TinyStories \citep{eldan2023tinystories} was built so that models below 10M parameters can write fluent
+English, which suits ten-minute runs; our code follows nanoGPT \citep{karpathy2022nanogpt}. Our models are
+three orders of magnitude smaller than Muennighoff et al.'s, the data is simple synthetic text, and the
+budget is matched in device time rather than FLOPs.
 
 % ===========================================================================
 \section{Experimental setup}\label{sec:setup}
@@ -129,7 +106,7 @@ gradient clipping at 1.0, batch $64\times256=16{,}384$ tokens, and fp16 mixed pr
 bf16). The learning rate warms up linearly over the first 2\% of the budget and then follows a cosine
 decay to 10\% of its peak, the schedule used by \citet{muennighoff2023scaling}. Because the schedule is
 defined on the fraction of budget used, every run completes it. Peak learning rates were selected per
-model in 17 pilot runs at $U=100$M on the \emph{validation} set (Appendix~\ref{app:lr}): $3\times10^{-3}$
+model in 17 pilot runs at $U=100$M on the \emph{validation} set (\texttt{results/tables/lr\_sweep.csv}): $3\times10^{-3}$
 for m1--m4 and $2\times10^{-3}$ for m5, which diverged at $3\times10^{-3}$. A single shared learning rate
 was rejected because it would favour some model sizes over others and bias the comparison of optimal size.
 
@@ -147,35 +124,26 @@ $1.0\times10^{15}$ for m1 to $7.0\times10^{15}$ for m5. Under a FLOP-matched bud
 \citet{hoffmann2022chinchilla} and \citet{muennighoff2023scaling}, small models would receive even more tokens.
 
 \begin{table}[h]\centering\small
-\caption{Models and per-run budgets. Throughput: median over pilot runs on a T4.
-Tokens/param uses non-embedding parameters.}
-\label{tab:models}
-\begin{tabular}{lrrrrrrrr}\toprule
-Model & layers & $d$ & heads & non-emb.\ params & tokens/s & token budget & steps & tokens/param\\\midrule
-m1 & 2 & 128 & 4 & 0.40M & 716k & 430M & 26.2k & 1083\\
-m2 & 4 & 192 & 4 & 1.78M & 379k & 228M & 13.9k & 128\\
-m3 & 6 & 256 & 8 & 4.74M & 234k & 141M & 8.6k & 30\\
-m4 & 6 & 384 & 6 & 10.6M & 145k & 87M & 5.3k & 8.2\\
-m5 & 8 & 512 & 8 & 25.2M & 76k & 46M & 2.8k & 1.8\\\bottomrule
+\caption{Models, per-run budgets, and epochs over the unique data at each $U$ (token budget$/U$).
+Throughput: median over pilot runs on a T4. Params and tokens/param are non-embedding.}
+\label{tab:models}\label{tab:epochs}
+\begin{tabular}{lcrrrrrrrr}\toprule
+ & & & & & & \multicolumn{4}{c}{epochs at $U=$}\\\cmidrule(l){7-10}
+Model & layers/$d$/heads & params & tokens/s & budget & tokens/param & 100M & 25M & 6M & 1.5M\\\midrule
+m1 & 2/128/4 & 0.40M & 716k & 430M & 1083 & 4.3 & 17 & 72 & 287\\
+m2 & 4/192/4 & 1.78M & 379k & 228M & 128 & 2.3 & 9.1 & 38 & 152\\
+m3 & 6/256/8 & 4.74M & 234k & 141M & 30 & 1.4 & 5.6 & 24 & 94\\
+m4 & 6/384/6 & 10.6M & 145k & 87M & 8.2 & 0.9 & 3.5 & 15 & 58\\
+m5 & 8/512/8 & 25.2M & 76k & 46M & 1.8 & 0.5 & 1.8 & 7.7 & 31\\\bottomrule
 \end{tabular}\end{table}
 
 \paragraph{Experimental grid.}
 We train all 5 models at all 4 values of $U$ with 3 seeds (60 runs). Epochs are not chosen directly:
 they equal token budget$/U$ (Table~\ref{tab:epochs}). The $U$ levels were chosen so that the grid spans
 the regimes identified by \citet{muennighoff2023scaling}: under 4 epochs (repetition nearly free), around
-16 epochs (their estimated half-life of repeated data), and far beyond it, where returns vanish and
-overfitting is expected.
+16 epochs (their estimated half-life of repeated data), and far beyond it, where repetition is nearly
+worthless and overfitting is expected.
 
-\begin{table}[h]\centering\small
-\caption{Epochs over the unique data in each cell of the grid (token budget$/U$).}
-\label{tab:epochs}
-\begin{tabular}{lrrrrr}\toprule
-$U$ & m1 & m2 & m3 & m4 & m5\\\midrule
-100M & 4.3 & 2.3 & 1.4 & 0.9 & 0.5\\
-25M  & 17  & 9.1 & 5.6 & 3.5 & 1.8\\
-6M   & 72  & 38  & 24  & 15  & 7.7\\
-1.5M & 287 & 152 & 94  & 58  & 31\\\bottomrule
-\end{tabular}\end{table}
 
 \paragraph{Evaluation.}
 The primary metric is test bits per byte,
@@ -287,9 +255,8 @@ move the optimum. Dropout also outperforms early stopping here: the best early-s
 Dropout lowers test BPB for every model, by 33\% (m1) to 70\% (m2), and the ranking becomes almost monotonic
 in size: m1 (0.874 $\pm$ 0.004) $<$ m2 (0.921) $<$ m3 (1.151) $<$ m5 (1.290) $<$ m4 (1.355). m1 is best both at
 the final checkpoint and under early stopping, unlike without dropout, where early stopping put m1 last.
-m1 with dropout is also clearly better than the best early-stopped model without dropout (m4, $\approx$0.94 BPB,
-converted from validation loss using 3.96 bytes per validation token; validation BPB runs about 0.01 above test
-BPB on the same runs, so the gap of $\approx$0.06--0.07 BPB is not an artefact of the split). With
+m1 with dropout also beats the best early-stopped model without dropout (m4, $\approx$0.94 BPB, converted
+from validation loss at 3.96 bytes per token; validation BPB runs about 0.01 above test BPB). With
 regularisation, extreme data scarcity therefore does favour the smallest model, which supports H1 more strongly
 than the unregularised grid.
 
@@ -313,105 +280,48 @@ m5 & \textbf{0.741} & 0.685 & 2.000 & 1.290\\\bottomrule
 \end{tabular}\end{table}
 
 % ===========================================================================
-\section{What did not work and unexpected results}\label{sec:notwork}
-\todo{DRAFT -- rewrite in your own words; all items are from notes/experiment\_log.md}
-\begin{itemize}
-\item \textbf{Wall-clock budgets were unreliable on shared cloud GPUs.} In the learning-rate pilots, throughput
-  for the same model varied across Modal T4 hosts by 24\% (m5: 67k--83k tokens/s) and 39\% (m4: 109k--152k).
-  One m4 run at learning rate $2\times10^{-3}$ landed on a slow host, completed about 30\% fewer steps, and
-  appeared worse than both neighbouring learning rates. Since this noise rivalled the effects we wanted to
-  measure (m3 vs.\ m4 at 100M differ by 0.001 BPB), we replaced live timing with a fixed per-model token budget.
-\item \textbf{Instability of the largest model.} m5 diverged at learning rate $3\times10^{-3}$ within the first
-  minute and never recovered (final validation loss 3.45 vs.\ 1.76 at $2\times10^{-3}$), likely due to fp16
-  training at a high learning rate, so m5 uses a lower peak learning rate than m1--m4.
-\item \textbf{Learning-rate optima at the grid edge.} The first pilot found the best learning rate at the edge
-  of the grid for m1 and m3, so a second pilot was needed to confirm interior optima.
-\item \textbf{The 6M reversal contradicted H1.} We expected the optimum to shrink smoothly with $U$; instead it
-  moved to the largest model at 6M. Investigating this led to the coupling mechanism and the dropout follow-up,
-  which removed the reversal.
-\item \textbf{Catastrophic memorisation.} m2 at 1.5M reached 3.04 test BPB, about the level of a uniform guess,
-  showing that repeated data can make a model extremely overconfident rather than merely less accurate.
-\item \textbf{Dropout is not free.} At 6M, dropout made m1 slightly worse (0.789 $\to$ 0.802 BPB), because the
-  smallest model was capacity-limited rather than overfitting. A single dropout rate is not optimal for every
-  model size.
-\item \textbf{Re-running is not bit-exact.} The dropout runs for m3--m5 were executed twice; results differed
-  slightly (e.g.\ m5 at 1.5M: 1.288 vs.\ 1.290 BPB) but always within the 95\% intervals, consistent with GPU
-  non-determinism. We report the latest runs.
-\end{itemize}
+\section{What did not work, and limitations}\label{sec:notwork}
+\paragraph{What did not work.}
+(i) \emph{Wall-clock budgets}: throughput of the same model varied by up to 24\% (m5) and 39\% (m4) across
+Modal T4 hosts; one m4 pilot run on a slow host did about 30\% fewer steps and looked worse than both
+neighbouring learning rates. This noise rivalled the effects we measure (m3 and m4 differ by 0.001 BPB at
+100M), so we switched to fixed per-model token budgets. (ii) \emph{Instability}: m5 diverged at learning
+rate $3\times10^{-3}$ (final validation loss 3.45 vs.\ 1.76 at $2\times10^{-3}$). (iii) The first LR pilot put
+the best rate at the grid edge for m1 and m3, so a second pilot was needed. (iv) Re-running the m3--m5 dropout
+runs changed results slightly (e.g.\ m5 at 1.5M: 1.288 vs.\ 1.290 BPB), within the 95\% intervals, consistent
+with GPU non-determinism; we report the later runs.
 
-% ===========================================================================
-\section{Limitations}
-\begin{itemize}
-\item \textbf{One dataset.} TinyStories is simple and repetitive; overfitting onsets may differ on web text.
-\item \textbf{Scale.} Our models are about three orders of magnitude smaller than those of
-  \citet{muennighoff2023scaling}, and budgets are minutes rather than GPU-months.
-\item \textbf{Device-time budget.} Results depend on the hardware's relative throughput across model sizes;
-  a FLOP-matched budget would give small models more tokens and could change the optimum.
-\item \textbf{Hyperparameters.} Learning rates were tuned at $U=100$M without dropout and reused at all $U$ and in
-  the dropout runs; only one dropout rate (0.1) was tried, and dropout was not run at 100M or 25M, so we cannot
-  say whether it would change the data-rich optimum. m2's budget is based on only two throughput measurements.
-\item \textbf{Measurement.} Overfitting onset is resolved to about 1/20 of a run; the early-stopping check uses
-  validation loss without intervals; 3 seeds per cell.
-\item \textbf{Final checkpoint.} Our main metric uses the final checkpoint; Section~\ref{sec:mechanism} shows this
-  choice drives the unregularised H1 result at small $U$.
-\end{itemize}
+\paragraph{Limitations.}
+We use one simple dataset, and models about three orders of magnitude smaller than
+\citet{muennighoff2023scaling}'s. The device-time budget depends on the hardware's relative throughput; a
+FLOP-matched budget would give small models more tokens and could move the optimum. Learning rates were tuned
+at $U=100$M without dropout and reused everywhere; only one dropout rate was tried, and not at 100M or 25M.
+Overfitting onset is resolved to about 1/20 of a run, the early-stopping check has no intervals, and we use
+3 seeds per cell. Finally, our main metric uses the final checkpoint, which drives the unregularised H1 result
+at small $U$ (Section~\ref{sec:mechanism}).
 
 % ===========================================================================
 \section{Use of AI tools}
-\todo{DRAFT -- edit so every statement is true for your group}
 We used Claude (Anthropic), in chat and through Claude Code, to draft the training, analysis and cloud-runner
 code; to suggest checks (a token-budget smoke test, the early-stopping sensitivity analysis and the
-bytes-per-token conversion); and to draft the Setup, Results and Background sections and our reading notes
-from our configuration and result files. We reviewed and tested all code, ran all experiments ourselves,
-verified every reported number against the result tables in the repository, checked cited claims against the
-original papers, and rewrote \todo{which sections} in our own words. The research question, the decision to
+bytes-per-token conversion); to draft our reading notes and check them against the original papers; and to
+draft the text of all report sections from our configuration and result files. We reviewed and edited the text, reviewed and tested all code, ran all experiments ourselves, and
+verified every reported number against the result tables in the repository. The research question, the decision to
 replace wall-clock timing with a token budget, the per-model learning rates, and the extension of the dropout
-follow-up to all five models were \todo{confirm: our decisions / made with AI suggestions that we evaluated}.
+follow-up to all five models were our decisions.
 
 % ===========================================================================
 \section{Conclusion}
-\todo{DRAFT -- rewrite in your own words}
-Larger models stop benefiting from repeated data after fewer epochs, with and without regularisation (H2).
-Whether scarce data calls for a smaller model (H1) depends on how overfitting is handled. Without
-regularisation, the optimum moves non-monotonically because, under a device-time budget, larger models are
-slower and therefore repeat their data less, and early stopping alone reverses the trend. With dropout,
-moderate scarcity leaves the optimum unchanged, while extreme scarcity clearly favours the smallest model,
-which achieves the best result we observed at that data level. An open question is whether these conclusions
-survive a FLOP-matched budget, under which small models would see even more tokens, and data that is harder
-to memorise than TinyStories.
+Larger models stop benefiting from repeated data after fewer epochs, with or without dropout (H2). Whether
+scarce data calls for a smaller model (H1) depends on how overfitting is handled: without regularisation, the
+optimum moves non-monotonically because larger models are slower and repeat their data less; with dropout,
+the optimum is unchanged at 6M tokens and moves to the smallest model only at 1.5M, where m1 with dropout gives
+the best result we observed. Whether this survives a FLOP-matched budget or harder data remains open.
 
+\setlength{\bibsep}{2pt}
+{\small
 \bibliographystyle{plainnat}
 \bibliography{refs}
-
-% ===========================================================================
-\appendix
-\section{Learning-rate pilots}\label{app:lr}
-Final validation loss (nats/token) at $U=100$M, one seed per cell, from \texttt{results/tables/lr\_sweep.csv}.
-These runs are excluded from the compute budget, as permitted.
-
-\begin{table}[h]\centering\small
-\begin{tabular}{lrrrrr}\toprule
-Model & $3\times10^{-4}$ & $10^{-3}$ & $2\times10^{-3}$ & $3\times10^{-3}$ & $6\times10^{-3}$\\\midrule
-m1 & 2.242 & 2.089 & -- & \textbf{2.056} & 2.065\\
-m2 & -- & -- & -- & \textbf{1.783} & 1.795\\
-m3 & 1.863 & 1.718 & -- & \textbf{1.685} & 1.698\\
-m4 & -- & 1.700 & 1.733$^\dagger$ & \textbf{1.674} & --\\
-m5 & 1.861 & 1.792 & \textbf{1.763} & 3.454$^\ddagger$ & --\\\bottomrule
-\end{tabular}
-
-\smallskip
-{\footnotesize $^\dagger$ slow host, $\approx$30\% fewer steps (run made before the switch to token budgets).
-$^\ddagger$ diverged.}
-\end{table}
-
-\section{Additional figures}
-\begin{figure}[h]\centering
-\includegraphics[width=0.95\linewidth]{figures/main_gap_vs_epochs.pdf}
-\caption{Validation minus training loss during training, by $U$ (no dropout).}
-\end{figure}
-\begin{figure}[h]\centering
-\includegraphics[width=0.6\linewidth]{figures/main_val_curves_smallU.pdf}
-\caption{Validation curves at $U=1.5$M (mean $\pm$ s.d.\ over seeds; no dropout).}
-\end{figure}
+}
 
 \end{document}
