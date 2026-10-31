@@ -305,14 +305,14 @@ at small $U$ (Section~\ref{sec:mechanism}).
 We used Claude (Anthropic), in chat and through Claude Code, to draft the training, analysis and cloud-runner
 code; to suggest checks (a token-budget smoke test, the early-stopping sensitivity analysis and the
 bytes-per-token conversion); to draft our reading notes and check them against the original papers; and to
-draft the text of all report sections from our configuration and result files. We reviewed and edited the text, reviewed and tested all code, ran all experiments ourselves, and
+draft most of the report text from our configuration and result files. We reviewed and edited the text, reviewed and tested all code, ran all experiments ourselves, and
 verified every reported number against the result tables in the repository. The research question, the decision to
 replace wall-clock timing with a token budget, the per-model learning rates, and the extension of the dropout
 follow-up to all five models were our decisions.
 
 % ===========================================================================
 \section{Conclusion}
-Larger models do not benefit from repeated data after a few epochs, with or without dropout (H2). Whether
+Larger models stop benefiting from repeated data after fewer epochs than smaller models, with or without dropout (H2). Whether
 scarce data calls for a smaller model (H1) depends on how overfitting is handled: without regularisation, the
 optimum moves non-monotonically because larger models are slower and repeat their data less; with dropout,
 the optimum is unchanged at 6M tokens and moves to the smallest model only at 1.5M, where m1 with dropout gives
