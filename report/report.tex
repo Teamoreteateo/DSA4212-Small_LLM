@@ -129,7 +129,7 @@ gradient clipping at 1.0, batch $64\times256=16{,}384$ tokens, and fp16 mixed pr
 bf16). The learning rate warms up linearly over the first 2\% of the budget and then follows a cosine
 decay to 10\% of its peak, the schedule used by \citet{muennighoff2023scaling}. Because the schedule is
 defined on the fraction of budget used, every run completes it. Peak learning rates were selected per
-model in 17 pilot runs at $U=100$M on the \emph{validation} set (Appendix~\ref{app:lr}): $3\times10^{-3}$
+model in 17 pilot runs at $U=100$M on the \emph{validation} set (\texttt{results/tables/lr\_sweep.csv}): $3\times10^{-3}$
 for m1--m4 and $2\times10^{-3}$ for m5, which diverged at $3\times10^{-3}$. A single shared learning rate
 was rejected because it would favour some model sizes over others and bias the comparison of optimal size.
 
@@ -147,16 +147,17 @@ $1.0\times10^{15}$ for m1 to $7.0\times10^{15}$ for m5. Under a FLOP-matched bud
 \citet{hoffmann2022chinchilla} and \citet{muennighoff2023scaling}, small models would receive even more tokens.
 
 \begin{table}[h]\centering\small
-\caption{Models and per-run budgets. Throughput: median over pilot runs on a T4.
-Tokens/param uses non-embedding parameters.}
-\label{tab:models}
-\begin{tabular}{lrrrrrrrr}\toprule
-Model & layers & $d$ & heads & non-emb.\ params & tokens/s & token budget & steps & tokens/param\\\midrule
-m1 & 2 & 128 & 4 & 0.40M & 716k & 430M & 26.2k & 1083\\
-m2 & 4 & 192 & 4 & 1.78M & 379k & 228M & 13.9k & 128\\
-m3 & 6 & 256 & 8 & 4.74M & 234k & 141M & 8.6k & 30\\
-m4 & 6 & 384 & 6 & 10.6M & 145k & 87M & 5.3k & 8.2\\
-m5 & 8 & 512 & 8 & 25.2M & 76k & 46M & 2.8k & 1.8\\\bottomrule
+\caption{Models, per-run budgets, and epochs over the unique data at each $U$ (token budget$/U$).
+Throughput: median over pilot runs on a T4. Params and tokens/param are non-embedding.}
+\label{tab:models}\label{tab:epochs}
+\begin{tabular}{lcrrrrrrrr}\toprule
+ & & & & & & \multicolumn{4}{c}{epochs at $U=$}\\\cmidrule(l){7-10}
+Model & layers/$d$/heads & params & tokens/s & budget & tokens/param & 100M & 25M & 6M & 1.5M\\\midrule
+m1 & 2/128/4 & 0.40M & 716k & 430M & 1083 & 4.3 & 17 & 72 & 287\\
+m2 & 4/192/4 & 1.78M & 379k & 228M & 128 & 2.3 & 9.1 & 38 & 152\\
+m3 & 6/256/8 & 4.74M & 234k & 141M & 30 & 1.4 & 5.6 & 24 & 94\\
+m4 & 6/384/6 & 10.6M & 145k & 87M & 8.2 & 0.9 & 3.5 & 15 & 58\\
+m5 & 8/512/8 & 25.2M & 76k & 46M & 1.8 & 0.5 & 1.8 & 7.7 & 31\\\bottomrule
 \end{tabular}\end{table}
 
 \paragraph{Experimental grid.}
@@ -166,16 +167,6 @@ the regimes identified by \citet{muennighoff2023scaling}: under 4 epochs (repeti
 16 epochs (their estimated half-life of repeated data), and far beyond it, where returns vanish and
 overfitting is expected.
 
-\begin{table}[h]\centering\small
-\caption{Epochs over the unique data in each cell of the grid (token budget$/U$).}
-\label{tab:epochs}
-\begin{tabular}{lrrrrr}\toprule
-$U$ & m1 & m2 & m3 & m4 & m5\\\midrule
-100M & 4.3 & 2.3 & 1.4 & 0.9 & 0.5\\
-25M  & 17  & 9.1 & 5.6 & 3.5 & 1.8\\
-6M   & 72  & 38  & 24  & 15  & 7.7\\
-1.5M & 287 & 152 & 94  & 58  & 31\\\bottomrule
-\end{tabular}\end{table}
 
 \paragraph{Evaluation.}
 The primary metric is test bits per byte,
@@ -313,7 +304,7 @@ m5 & \textbf{0.741} & 0.685 & 2.000 & 1.290\\\bottomrule
 \end{tabular}\end{table}
 
 % ===========================================================================
-\section{What did not work and unexpected results}\label{sec:notwork}
+\section{What did not work, and limitations}\label{sec:notwork}
 \todo{DRAFT -- rewrite in your own words; all items are from notes/experiment\_log.md}
 \begin{itemize}
 \item \textbf{Wall-clock budgets were unreliable on shared cloud GPUs.} In the learning-rate pilots, throughput
@@ -326,21 +317,11 @@ m5 & \textbf{0.741} & 0.685 & 2.000 & 1.290\\\bottomrule
   training at a high learning rate, so m5 uses a lower peak learning rate than m1--m4.
 \item \textbf{Learning-rate optima at the grid edge.} The first pilot found the best learning rate at the edge
   of the grid for m1 and m3, so a second pilot was needed to confirm interior optima.
-\item \textbf{The 6M reversal contradicted H1.} We expected the optimum to shrink smoothly with $U$; instead it
-  moved to the largest model at 6M. Investigating this led to the coupling mechanism and the dropout follow-up,
-  which removed the reversal.
-\item \textbf{Catastrophic memorisation.} m2 at 1.5M reached 3.04 test BPB, about the level of a uniform guess,
-  showing that repeated data can make a model extremely overconfident rather than merely less accurate.
-\item \textbf{Dropout is not free.} At 6M, dropout made m1 slightly worse (0.789 $\to$ 0.802 BPB), because the
-  smallest model was capacity-limited rather than overfitting. A single dropout rate is not optimal for every
-  model size.
 \item \textbf{Re-running is not bit-exact.} The dropout runs for m3--m5 were executed twice; results differed
   slightly (e.g.\ m5 at 1.5M: 1.288 vs.\ 1.290 BPB) but always within the 95\% intervals, consistent with GPU
   non-determinism. We report the latest runs.
 \end{itemize}
-
-% ===========================================================================
-\section{Limitations}
+\paragraph{Limitations.}
 \begin{itemize}
 \item \textbf{One dataset.} TinyStories is simple and repetitive; overfitting onsets may differ on web text.
 \item \textbf{Scale.} Our models are about three orders of magnitude smaller than those of
@@ -382,36 +363,5 @@ to memorise than TinyStories.
 
 \bibliographystyle{plainnat}
 \bibliography{refs}
-
-% ===========================================================================
-\appendix
-\section{Learning-rate pilots}\label{app:lr}
-Final validation loss (nats/token) at $U=100$M, one seed per cell, from \texttt{results/tables/lr\_sweep.csv}.
-These runs are excluded from the compute budget, as permitted.
-
-\begin{table}[h]\centering\small
-\begin{tabular}{lrrrrr}\toprule
-Model & $3\times10^{-4}$ & $10^{-3}$ & $2\times10^{-3}$ & $3\times10^{-3}$ & $6\times10^{-3}$\\\midrule
-m1 & 2.242 & 2.089 & -- & \textbf{2.056} & 2.065\\
-m2 & -- & -- & -- & \textbf{1.783} & 1.795\\
-m3 & 1.863 & 1.718 & -- & \textbf{1.685} & 1.698\\
-m4 & -- & 1.700 & 1.733$^\dagger$ & \textbf{1.674} & --\\
-m5 & 1.861 & 1.792 & \textbf{1.763} & 3.454$^\ddagger$ & --\\\bottomrule
-\end{tabular}
-
-\smallskip
-{\footnotesize $^\dagger$ slow host, $\approx$30\% fewer steps (run made before the switch to token budgets).
-$^\ddagger$ diverged.}
-\end{table}
-
-\section{Additional figures}
-\begin{figure}[h]\centering
-\includegraphics[width=0.95\linewidth]{figures/main_gap_vs_epochs.pdf}
-\caption{Validation minus training loss during training, by $U$ (no dropout).}
-\end{figure}
-\begin{figure}[h]\centering
-\includegraphics[width=0.6\linewidth]{figures/main_val_curves_smallU.pdf}
-\caption{Validation curves at $U=1.5$M (mean $\pm$ s.d.\ over seeds; no dropout).}
-\end{figure}
 
 \end{document}
