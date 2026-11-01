@@ -68,6 +68,9 @@ python code/early_stop_check.py results/main
 python code/analyze.py results/followup_dropout --tag followup_dropout
 python code/key_numbers.py results/followup_dropout
 python code/early_stop_check.py results/followup_dropout
+
+# 6. Overfitting-onset figure (Fig. 1 right; needs the key_numbers CSVs from step 5)
+python code/extra_figures.py
 ```
 Finished runs are skipped, so any `modal run` command can be relaunched safely. Validation bytes/token
 (3.958, used to convert early-stopped validation loss to BPB) is printed by `code/early_stop_check.py`.
@@ -78,7 +81,8 @@ Runs are not bit-exact across re-executions (GPU non-determinism); differences a
 |---|---|
 | Table 1 (models, budgets, epochs) | `configs/main_grid.json`, `results/tables/lr_sweep.csv`, `results/tables/main_summary.csv` |
 | Learning-rate pilots (Section 3) | `results/tables/lr_sweep.csv` |
-| Fig. 1 left / right | `report/figures/main_bpb_vs_size.pdf`, `report/figures/main_bpb_vs_epochs.pdf` |
+| Fig. 1 left | `report/figures/main_bpb_vs_size.pdf` (`code/analyze.py`) |
+| Fig. 1 right (overfitting onset) | `report/figures/onset_vs_size.pdf` (`code/extra_figures.py`) |
 | Table 2 (main test BPB) | `results/tables/main_summary.csv` |
 | H1/H2 numbers (optimum, onset, validation rise) | `results/tables/main_key_numbers.csv` |
 | Early-stopping check (Section 4.3) | `results/tables/early_stop_check.csv`, `results/tables/followup_dropout_early_stop_check.csv` |
@@ -89,7 +93,8 @@ The other figures in `report/figures/` (throughput, train/val gap, validation cu
 
 ## Repository layout
 ```
-code/        prepare_data, model, train, grid, run_grid, analyze, key_numbers, early_stop_check, lr_sweep_summary
+code/        prepare_data, model, train, grid, run_grid, analyze, key_numbers, early_stop_check,
+             lr_sweep_summary, extra_figures
 configs/     JSON grids (smoke, smoke_tokens, lr_sweep, lr_sweep2, main_grid, followup_regularisation)
 modal_app.py Modal runner (T4 GPUs, persistent volume)
 results/     raw run JSONs (lr_sweep, main, followup_dropout) and summary CSVs (tables/)
@@ -99,5 +104,5 @@ scripts/     check_env.py
 ```
 
 ## AI assistance
-Claude (Anthropic) was used to draft the code, the reading notes and some of the report text, which we
-reviewed, edited and checked against the result files. See Section "Use of AI tools" in the report.
+Claude (Anthropic) was used to draft the code, the reading notes and most of the report text, which we
+reviewed, edited, rewrote and checked against the result files. See Section "Use of AI tools" in the report.

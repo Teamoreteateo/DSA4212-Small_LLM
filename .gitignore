@@ -261,3 +261,8 @@ outputs/
 *.tmp
 .DS_Store
 Thumbs.db
+
+# LaTeX build files
+report/*.fls
+report/*.fdb_latexmk
+report/*.synctex.gz

@@ -164,10 +164,11 @@ divergence rule (final validation loss more than 0.5 nats above its cell's media
 
 \begin{figure}[t]\centering
 \includegraphics[width=0.49\linewidth]{figures/main_bpb_vs_size.pdf}\hfill
-\includegraphics[width=0.49\linewidth]{figures/main_bpb_vs_epochs.pdf}
-\caption{Left: test BPB against model size at each $U$ (log axes; circle marks the optimum).
-Right: test BPB against epochs over the unique data, one line per model. Error bars: 95\% $t$-intervals over 3 seeds.}
-\label{fig:size}\label{fig:epochs}
+\includegraphics[width=0.49\linewidth]{figures/onset_vs_size.pdf}
+\caption{Left: test BPB against model size at each $U$ (log axes; circle marks the optimum; error bars: 95\%
+$t$-intervals over 3 seeds). Right: overfitting onset (epochs at minimum validation loss) against model size at
+6M and 1.5M, without and with dropout; open markers are runs that never overfit, plotted at their total epochs.}
+\label{fig:size}\label{fig:onset}
 \end{figure}
 
 \paragraph{Data-rich regime.}
@@ -181,7 +182,8 @@ so the optimum lies inside our model range. The ranking at $U=25$M is the same (
 
 \paragraph{Repetition up to a few epochs is nearly free.}
 Going from $U=100$M to 25M means every model repeats its data about four times more often. Test BPB rises by
-only 0.5\% for m5 (1.8 epochs), 0.7\% for m1 (17 epochs) and 1.8--2.0\% for m2--m4 (3.5--9 epochs).
+only 0.5\% for m5 (1.8 epochs), 0.7\% for m1 (17 epochs; it already repeats its data 4.3 times at 100M) and 1.8--2.0\% 
+for m2--m4 (3.5--9 epochs).
 These differences exceed the confidence intervals but are small in practice, consistent with the finding of
 \citet{muennighoff2023scaling} that up to about four epochs of repeated data is worth almost as much as fresh data.
 
@@ -211,19 +213,22 @@ We measure overfitting onset as the number of epochs at which validation loss re
 only when it later rises by more than 0.005 nats. At $U=6$M, onset falls steadily with model size: 23.2, 12.4,
 8.2 and 5.7 epochs for m2--m5, while m1 never overfits in 72 epochs. At $U=1.5$M it is 28.5, 15.8, 9.1, 8.8 and
 7.3 epochs for m1--m5, after which validation loss rises by 0.9 (m1) to 5.7 (m2) nats. H2 is therefore
-supported: larger models stop benefiting from repetition sooner. Because losses are logged every 30\,s of
-training, onset is resolved only to about 1/20 of a run's epochs. This is fine at 6M (0.4--1.9 epochs), but at
-1.5M m3, m4 and m5 cannot be told apart. The secondary measure, the final gap between validation and training
-loss, is not monotonic in size at 1.5M (m2 has the largest gap) because it depends on how many epochs a model
-trains \emph{past} its onset, not only on when overfitting starts.
+supported (Fig.~\ref{fig:onset}, right): larger models stop benefiting from repetition sooner. Because losses are 
+logged every 30\,s of training, onset is resolved only to about 1/20 of a run's epochs. This is fine at 6M 
+(0.4--1.9 epochs), but at 1.5M m3, m4 and m5 cannot be told apart. The secondary measure, the final gap between 
+validation and training loss, is not monotonic in size at 1.5M (m2 has the largest gap) because it depends on 
+how many epochs a model trains \emph{past} its onset, not only on when overfitting starts.
 
 \subsection{Mechanism: size and repetition are coupled}\label{sec:mechanism}
 
 Under a fixed device-time budget a larger model is slower, so it sees fewer epochs of the same data. Combining
 this with H2 explains the H1 pattern. At 6M, m3 and m4 run 24 and 15 epochs, well past their onsets (12 and 8),
 and their validation loss rises by 0.40 nats; m5 runs only 7.7 epochs, just past its onset (5.7), and loses 0.08.
-The largest model wins because its slowness protects it from over-repetition, while m1 and m2 have too little
-capacity to memorise much. At 1.5M every model passes its onset by a wide margin, and only m1's tiny capacity
+Most of m5's advantage comes from this protection: under early stopping (below) its lead over m4 shrinks from
+0.13 to about 0.01 BPB, although it remains first. m1 and m2 have too little capacity to memorise much. The
+non-monotonic shape resembles model-wise double descent \citep{nakkiran2021deep}, but here size and epochs
+change together, so the two effects cannot be separated. At 1.5M every model passes its onset by a wide margin, 
+and only m1's tiny capacity
 limits the damage.
 
 \paragraph{Sensitivity check: early stopping.}
@@ -254,7 +259,8 @@ move the optimum. Dropout also outperforms early stopping here: the best early-s
 \paragraph{Extreme scarcity (1.5M): the smallest model wins, and wins by more.}
 Dropout lowers test BPB for every model, by 33\% (m1) to 70\% (m2), and the ranking becomes almost monotonic
 in size: m1 (0.874 $\pm$ 0.004) $<$ m2 (0.921) $<$ m3 (1.151) $<$ m5 (1.290) $<$ m4 (1.355). m1 is best both at
-the final checkpoint and under early stopping, unlike without dropout, where early stopping put m1 last.
+the final checkpoint and under early stopping (on validation, by only 0.008 BPB over m3 and m2), unlike
+without dropout, where early stopping put m1 last.
 m1 with dropout also beats the best early-stopped model without dropout (m4, $\approx$0.94 BPB, converted
 from validation loss at 3.96 bytes per token; validation BPB runs about 0.01 above test BPB). With
 regularisation, extreme data scarcity therefore does favour the smallest model, which supports H1 more strongly
@@ -287,9 +293,9 @@ Modal T4 hosts; one m4 pilot run on a slow host did about 30\% fewer steps and l
 neighbouring learning rates. This noise rivalled the effects we measure (m3 and m4 differ by 0.001 BPB at
 100M), so we switched to fixed per-model token budgets. (ii) \emph{Instability}: m5 diverged at learning
 rate $3\times10^{-3}$ (final validation loss 3.45 vs.\ 1.76 at $2\times10^{-3}$). (iii) The first LR pilot put
-the best rate at the grid edge for m1 and m3, so a second pilot was needed. (iv) Re-running the m3--m5 dropout
-runs changed results slightly (e.g.\ m5 at 1.5M: 1.288 vs.\ 1.290 BPB), within the 95\% intervals, consistent
-with GPU non-determinism; we report the later runs.
+the best rate at the grid edge for m1 and m3, so a second pilot was needed. (iv) The m3--m5 dropout runs were first run
+on a second team member's Modal workspace and later re-executed; results changed slightly (e.g.\ m5 at 1.5M: 1.288 vs.\ 1.290 BPB), 
+within the 95\% intervals, consistent with GPU non-determinism; we report the later runs.
 
 \paragraph{Limitations.}
 We use one simple dataset, and models about three orders of magnitude smaller than
@@ -305,10 +311,10 @@ at small $U$ (Section~\ref{sec:mechanism}).
 We used Claude (Anthropic), in chat and through Claude Code, to draft the training, analysis and cloud-runner
 code; to suggest checks (a token-budget smoke test, the early-stopping sensitivity analysis and the
 bytes-per-token conversion); to draft our reading notes and check them against the original papers; and to
-draft some of the report text from our configuration and result files. We reviewed and edited the text, reviewed and tested all code, ran all experiments ourselves, and
-verified every reported number against the result tables in the repository. The research question, the decision to
-replace wall-clock timing with a token budget, the per-model learning rates, and the extension of the dropout
-follow-up to all five models were our decisions.
+draft most of the report text from our configuration and result files. We reviewed, edited and partly rewrote the text, 
+reviewed and tested all code, ran all experiments ourselves, and verified every reported number against the result tables in the repository. 
+The research question, the decision to replace wall-clock timing with a token budget, the per-model learning rates, 
+and the extension of the dropout follow-up to all five models were our decisions.
 
 % ===========================================================================
 \section{Conclusion}
