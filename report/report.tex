@@ -28,8 +28,8 @@ Compute-optimal scaling laws \citep{kaplan2020scaling,hoffmann2022chinchilla} te
 training budget between model size and training tokens, assuming fresh data is always available. When unique
 data runs short, extra compute must go either into more epochs over the same data or into a larger model that
 sees it fewer times. \citet{muennighoff2023scaling} studied this trade-off for models of 10M--9B parameters:
-up to about four epochs of repetition was almost as good as new data, and extra compute was better spent on
-epochs than on parameters. We ask whether this holds for tiny GPTs trained for ten minutes on one GPU:
+up to about four epochs of repetition was almost as good as new data, and extra compute was best spent mostly 
+on more epochs rather than more parameters. We ask whether this holds for tiny GPTs trained for ten minutes on one GPU:
 \begin{quote}\emph{Under a fixed per-run compute budget, how do (i) the optimal model size and (ii) the
 usefulness of repeating data change as the number of unique training tokens $U$ shrinks?}\end{quote}
 \noindent We fixed two hypotheses before the main experiments. \textbf{H1}: the optimal model size decreases
@@ -58,9 +58,9 @@ show that test error can be non-monotonic in model size and training time (doubl
 
 \paragraph{Our setting.}
 TinyStories \citep{eldan2023tinystories} was built so that models below 10M parameters can write fluent
-English, which suits ten-minute runs; our code follows nanoGPT \citep{karpathy2022nanogpt}. Our models are
-three orders of magnitude smaller than Muennighoff et al.'s, the data is simple synthetic text, and the
-budget is matched in device time rather than FLOPs.
+English, which suits ten-minute runs; our code follows nanoGPT \citep{karpathy2022nanogpt}. Our models 
+(0.4M--25M parameters) lie at and below the bottom of Muennighoff et al.'s range (10M--9B), the data is 
+simple synthetic text, and the budget is matched in device time rather than FLOPs.
 
 % ===========================================================================
 \section{Experimental setup}\label{sec:setup}
@@ -298,10 +298,9 @@ on a second team member's Modal workspace and later re-executed; results changed
 within the 95\% intervals, consistent with GPU non-determinism; we report the later runs.
 
 \paragraph{Limitations.}
-We use one simple dataset, and models about three orders of magnitude smaller than
-\citet{muennighoff2023scaling}'s. The device-time budget depends on the hardware's relative throughput; a
-FLOP-matched budget would give small models more tokens and could move the optimum. Learning rates were tuned
-at $U=100$M without dropout and reused everywhere; only one dropout rate was tried, and not at 100M or 25M.
+We use one simple dataset, and models at and below the bottom of \citet{muennighoff2023scaling}’s size range. 
+The device-time budget depends on the hardware's relative throughput; a FLOP-matched budget would give small models more tokens and could move the optimum. 
+Learning rates were tuned at $U=100$M without dropout and reused everywhere; only one dropout rate was tried, and not at 100M or 25M.
 Overfitting onset is resolved to about 1/20 of a run, the early-stopping check has no intervals, and we use
 3 seeds per cell. Finally, our main metric uses the final checkpoint, which drives the unregularised H1 result
 at small $U$ (Section~\ref{sec:mechanism}).
