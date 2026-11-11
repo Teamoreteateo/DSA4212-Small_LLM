@@ -1,0 +1,11 @@
+{
+  "name": "repro_check",
+  "out_dir": "results/repro_check",
+  "models": [
+    {"name": "m1", "n_layer": 2, "n_head": 4, "n_embd": 128, "lr": 0.003, "budget_tokens": 430000000}
+  ],
+  "unique_tokens": [100000000],
+  "seeds": [0],
+  "common": {"budget_sec": 600, "eval_every_sec": 30, "data_dir": "data",
+             "batch_size": 64, "block_size": 256, "dropout": 0.0, "weight_decay": 0.1}
+}

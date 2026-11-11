@@ -24,3 +24,4 @@
 | 28 Oct | Tim | m3-m5 dropout reruns differ slightly from first runs (e.g. m5@1.5M 1.2876 vs 1.2896) | all within 95% CI | GPU non-determinism; report uses latest files |
 | 28 Oct | Tim | Dropout hurts m1 @6M (0.789 -> 0.802) | m1 capacity-limited, not overfitting | single dropout rate not optimal for all sizes |
 | 28 Oct | Tim | Early-stopped BPB (val bytes/token = 3.958) | 1.5M: best no-dropout early-stopped m4 ≈ 0.944 vs m1+dropout 0.874 test; 6M: m5 ≈ 0.719 vs m4+dropout 0.681 | dropout beats early stopping; H1 holds under best regulariser |
+| 11 Nov | Tim | Fresh-clone readme test | L1 env OK; L2 all tables match; L3 smoke runs pass | readme verified |
