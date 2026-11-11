@@ -76,6 +76,9 @@ Finished runs are skipped, so any `modal run` command can be relaunched safely. 
 (3.958, used to convert early-stopped validation loss to BPB) is printed by `code/early_stop_check.py`.
 Runs are not bit-exact across re-executions (GPU non-determinism); differences are within the reported intervals.
 
+# 7. (Optional) reproduction spot check: re-run one main-grid cell and compare with the committed result
+modal run modal_app.py --config configs/repro_check.json
+
 ## Where each report item comes from
 | Report item | File |
 |---|---|
@@ -87,6 +90,7 @@ Runs are not bit-exact across re-executions (GPU non-determinism); differences a
 | H1/H2 numbers (optimum, onset, validation rise) | `results/tables/main_key_numbers.csv` |
 | Early-stopping check (Section 4.3) | `results/tables/early_stop_check.csv`, `results/tables/followup_dropout_early_stop_check.csv` |
 | Table 3 and Section 4.4 (dropout) | `results/tables/followup_dropout_summary.csv`, `results/tables/followup_dropout_key_numbers.csv` |
+| Reproduction spot check (not in report) | `results/repro_check/m1_U100000000_s0.json` vs `results/main/m1_U100000000_s0.json` (test BPB 0.7455 in both) |
 
 The other figures in `report/figures/` (throughput, train/val gap, validation curves) are produced by
 `code/analyze.py` as supporting diagnostics and are not used in the report.
@@ -105,4 +109,4 @@ scripts/     check_env.py
 
 ## AI assistance
 Claude (Anthropic) was used to draft the code, the reading notes and most of the report text, which we
-reviewed, edited, rewrote and checked against the result files. See Section "Use of AI tools" in the report.
+reviewed, edited, partly rewrote and checked against the result files. See Section "Use of AI tools" in the report.
